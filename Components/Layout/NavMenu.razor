@@ -1,0 +1,106 @@
+@inject NavigationManager Nav
+
+<header class="site-header">
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <!-- Логотип -->
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-gem brand-icon"></i>
+                <span class="brand-name">Чётки</span>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+                <i class="bi bi-list text-white fs-4"></i>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navMenu">
+                <!-- Поиск -->
+                <div class="search-wrapper mx-auto">
+                    <div class="search-box">
+                        <i class="bi bi-search search-icon"></i>
+                        <input type="text"
+                               class="search-input"
+                               placeholder="Поиск чёток..."
+                               @bind="searchQuery"
+                               @bind:event="oninput"
+                               @onkeydown="HandleKey" />
+                        @if (!string.IsNullOrEmpty(searchQuery))
+                        {
+                            <button class="search-clear" @onclick="ClearSearch">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Иконки корзины / избранного / заказов -->
+                <div class="nav-actions">
+                    <a href="/favorites" class="nav-action-btn @(IsActive("/favorites"))">
+                        <i class="bi bi-heart"></i>
+                        @if (FavCount > 0)
+                        {
+                            <span class="badge-count">@FavCount</span>
+                        }
+                    </a>
+                    <a href="/orders" class="nav-action-btn @(IsActive("/orders"))">
+                        <i class="bi bi-bag"></i>
+                    </a>
+                    <a href="/cart" class="nav-action-btn cart-btn @(IsActive("/cart"))">
+                        <i class="bi bi-cart3"></i>
+                        @if (CartCount > 0)
+                        {
+                            <span class="badge-count">@CartCount</span>
+                        }
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Навигационная лента категорий -->
+    <div class="category-bar">
+        <div class="container">
+            <div class="category-links">
+                <a href="/catalog" class="cat-link @(IsActive("/catalog", exact: true))">Все товары</a>
+                <a href="/catalog?cat=Религиозные"   class="cat-link">Религиозные</a>
+                <a href="/catalog?cat=Деревянные"    class="cat-link">Деревянные</a>
+                <a href="/catalog?cat=Янтарные"      class="cat-link">Янтарные</a>
+                <a href="/catalog?cat=Каменные"      class="cat-link">Каменные</a>
+                <a href="/catalog?cat=Коралловые"    class="cat-link">Коралловые</a>
+                <a href="/catalog?cat=Хрустальные"   class="cat-link">Хрустальные</a>
+                <a href="/catalog?cat=Металлические" class="cat-link">Металлические</a>
+                <a href="/catalog?cat=Антистресс"    class="cat-link">Антистресс</a>
+                <a href="/catalog?cat=Коллекционные" class="cat-link">Коллекционные</a>
+                <a href="/catalog?cat=Роскошные"     class="cat-link">Роскошные</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+@code {
+    [Parameter] public int CartCount { get; set; }
+    [Parameter] public int FavCount  { get; set; }
+    [Parameter] public EventCallback<string> OnSearch { get; set; }
+
+    private string searchQuery = string.Empty;
+
+    private async Task HandleKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await OnSearch.InvokeAsync(searchQuery);
+    }
+
+    private void ClearSearch()
+    {
+        searchQuery = string.Empty;
+        Nav.NavigateTo("/catalog");
+    }
+
+    private string IsActive(string href, bool exact = false)
+    {
+        var cur = Nav.Uri.Replace(Nav.BaseUri.TrimEnd('/'), "").Split('?')[0];
+        return exact
+            ? (cur == href || (href == "/" && cur == "")) ? "active" : ""
+            : cur.StartsWith(href) ? "active" : "";
+    }
+}

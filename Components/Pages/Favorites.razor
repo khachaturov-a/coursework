@@ -1,0 +1,126 @@
+@page "/favorites"
+@inject IFavoriteService FavoriteService
+@inject ICartService CartService
+@inject SessionService Session
+
+<PageTitle>Избранное — Чётки</PageTitle>
+
+<div class="container py-4">
+    <h1 class="page-title"><i class="bi bi-heart me-2"></i>Избранное</h1>
+
+    @if (!Session.IsInitialized || loading)
+    {
+        <div class="loading-spinner"><div class="spinner"></div></div>
+    }
+    else if (items.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="bi bi-heart fs-1"></i>
+            <h3>Избранное пусто</h3>
+            <p>Нажмите <i class="bi bi-heart"></i> на товаре, чтобы добавить в избранное</p>
+            <a href="/catalog" class="btn btn-gold mt-3">Перейти в каталог</a>
+        </div>
+    }
+    else
+    {
+        <div class="products-grid">
+            @foreach (var item in items)
+            {
+                <div class="product-card">
+                    <div class="product-card__cover cat-@GetCatClass(item.CategoryName)">
+                        <div class="product-card__overlay">
+                            <span class="product-card__category">@item.CategoryName</span>
+                        </div>
+                        <div class="product-card__icon-wrap">
+                            <i class="bi @GetCatIcon(item.CategoryName) product-card__main-icon"></i>
+                        </div>
+                        @if (!item.InStock)
+                        {
+                            <span class="product-card__out-badge">Нет в наличии</span>
+                        }
+                    </div>
+                    <div class="product-card__body">
+                        <h3 class="product-card__name">
+                            <a href="/product/@item.ChetkasId" class="product-link">@item.Name</a>
+                        </h3>
+                        <p class="product-card__material">@item.Material</p>
+                        @if (!string.IsNullOrEmpty(item.Description))
+                        {
+                            <p class="product-card__desc">
+                                @(item.Description?.Length > 80 ? item.Description[..77] + "..." : item.Description)
+                            </p>
+                        }
+                        <div class="product-card__footer">
+                            <span class="product-card__price">@item.Price.ToString("N0") ₽</span>
+                            <div class="product-card__actions">
+                                <button class="btn-icon fav-btn active"
+                                        @onclick="() => RemoveFavorite(item)"
+                                        title="Убрать из избранного">
+                                    <i class="bi bi-heart-fill"></i>
+                                </button>
+                                <button class="btn-icon cart-btn"
+                                        disabled="@(!item.InStock)"
+                                        @onclick="() => AddToCart(item)"
+                                        title="В корзину">
+                                    <i class="bi bi-cart-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<FavoriteItemDto> items = new();
+    private bool loading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if ((firstRender || loading) && Session.IsInitialized)
+            await Load();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Session.IsInitialized) await Load();
+    }
+
+    private async Task Load()
+    {
+        loading = true;
+        items   = await FavoriteService.GetFavoritesAsync(Session.SessionId);
+        loading = false;
+        StateHasChanged();
+    }
+
+    private async Task RemoveFavorite(FavoriteItemDto item)
+    {
+        await FavoriteService.RemoveFavoriteAsync(Session.SessionId, item.ChetkasId);
+        items.Remove(item);
+    }
+
+    private async Task AddToCart(FavoriteItemDto item)
+    {
+        await CartService.AddToCartAsync(Session.SessionId, item.ChetkasId);
+    }
+
+    private static string GetCatClass(string cat) => cat switch
+    {
+        "Религиозные" => "rel", "Деревянные" => "wood", "Янтарные" => "amb",
+        "Каменные" => "stone", "Коралловые" => "coral", "Хрустальные" => "cryst",
+        "Металлические" => "metal", "Антистресс" => "anti",
+        "Коллекционные" => "coll", "Роскошные" => "lux", _ => "default"
+    };
+
+    private static string GetCatIcon(string cat) => cat switch
+    {
+        "Религиозные" => "bi-moon-stars", "Деревянные" => "bi-tree",
+        "Янтарные" => "bi-sun", "Каменные" => "bi-diamond",
+        "Коралловые" => "bi-flower1", "Хрустальные" => "bi-stars",
+        "Металлические" => "bi-link-45deg", "Антистресс" => "bi-emoji-smile",
+        "Коллекционные" => "bi-award", "Роскошные" => "bi-gem", _ => "bi-circle"
+    };
+}

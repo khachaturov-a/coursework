@@ -1,0 +1,229 @@
+@page "/catalog"
+@inject IBeadService BeadService
+@inject SessionService Session
+@inject NavigationManager Nav
+
+<PageTitle>Каталог — Чётки</PageTitle>
+
+<div class="catalog-page">
+    <!-- Шапка каталога -->
+    <div class="catalog-header">
+        <div class="container">
+            <h1 class="catalog-title">
+                @if (!string.IsNullOrEmpty(FilterCategory))
+                { <span>@FilterCategory чётки</span> }
+                else if (!string.IsNullOrEmpty(SearchQuery))
+                { <span>Поиск: «@SearchQuery»</span> }
+                else
+                { <span>Весь каталог</span> }
+            </h1>
+            <p class="catalog-subtitle">Найдено: @filtered.Count товаров</p>
+        </div>
+    </div>
+
+    <div class="container catalog-body">
+        <div class="row g-4">
+            <!-- Фильтры (боковая панель) -->
+            <div class="col-lg-3">
+                <div class="filter-panel">
+                    <h5 class="filter-title"><i class="bi bi-funnel me-2"></i>Фильтры</h5>
+
+                    <!-- Поиск -->
+                    <div class="filter-group">
+                        <label class="filter-label">Поиск</label>
+                        <input class="filter-input" type="text" placeholder="Название или материал..."
+                               @bind="searchInput" @bind:event="oninput" @onkeyup="ApplyFilter" />
+                    </div>
+
+                    <!-- Категория -->
+                    <div class="filter-group">
+                        <label class="filter-label">Категория</label>
+                        <select class="filter-select" @bind="selectedCategory" @bind:after="ApplyFilter">
+                            <option value="">Все категории</option>
+                            @foreach (var cat in categories)
+                            {
+                                <option value="@cat.Name">@cat.Name (@cat.ProductCount)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Цена -->
+                    <div class="filter-group">
+                        <label class="filter-label">Цена: @minPrice ₽ — @maxPrice ₽</label>
+                        <input type="range" class="filter-range" min="0" max="@absoluteMax"
+                               value="@minPrice"
+                               @oninput="e => { minPrice = int.Parse(e.Value!.ToString()!); ApplyFilter(); }" />
+                        <input type="range" class="filter-range" min="0" max="@absoluteMax"
+                               value="@maxPrice"
+                               @oninput="e => { maxPrice = int.Parse(e.Value!.ToString()!); ApplyFilter(); }" />
+                    </div>
+
+                    <!-- Материал -->
+                    <div class="filter-group">
+                        <label class="filter-label">Материал</label>
+                        <select class="filter-select" @bind="selectedMaterial" @bind:after="ApplyFilter">
+                            <option value="">Любой</option>
+                            @foreach (var mat in materials)
+                            {
+                                <option value="@mat">@mat</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Наличие -->
+                    <div class="filter-group">
+                        <label class="filter-check">
+                            <input type="checkbox" @bind="inStockOnly" @bind:after="ApplyFilter" />
+                            <span>Только в наличии</span>
+                        </label>
+                    </div>
+
+                    <button class="btn btn-reset w-100" @onclick="ResetFilters">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Сбросить
+                    </button>
+                </div>
+            </div>
+
+            <!-- Товары -->
+            <div class="col-lg-9">
+                <!-- Сортировка -->
+                <div class="sort-bar">
+                    <span class="sort-label">Сортировка:</span>
+                    <div class="sort-btns">
+                        <button class="sort-btn @(sortMode == "price_asc"  ? "active" : "")" @onclick='() => SetSort("price_asc")'>Цена ↑</button>
+                        <button class="sort-btn @(sortMode == "price_desc" ? "active" : "")" @onclick='() => SetSort("price_desc")'>Цена ↓</button>
+                        <button class="sort-btn @(sortMode == "name"       ? "active" : "")" @onclick='() => SetSort("name")'>По названию</button>
+                        <button class="sort-btn @(sortMode == "popular"    ? "active" : "")" @onclick='() => SetSort("popular")'>Популярные</button>
+                    </div>
+                </div>
+
+                @if (loading)
+                {
+                    <div class="products-grid">
+                        @for (int i = 0; i < 8; i++) { <div class="skeleton-card"></div> }
+                    </div>
+                }
+                else if (filtered.Count == 0)
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-search fs-1"></i>
+                        <h4>Ничего не найдено</h4>
+                        <p>Попробуйте изменить параметры поиска</p>
+                        <button class="btn btn-gold" @onclick="ResetFilters">Сбросить фильтры</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="products-grid">
+                        @foreach (var item in filtered)
+                        {
+                            <ProductCard Product="@item"
+                                         SessionId="@Session.SessionId"
+                                         OnChanged="StateHasChanged" />
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "cat")] public string? FilterCategory { get; set; }
+    [SupplyParameterFromQuery(Name = "q")]   public string? SearchQuery    { get; set; }
+    [SupplyParameterFromQuery(Name = "sort")]public string? SortParam      { get; set; }
+
+    private List<RecommendationDto> allProducts = new();
+    private List<RecommendationDto> filtered    = new();
+    private List<CategoryDto>       categories  = new();
+    private List<string>            materials   = new();
+
+    private string searchInput      = string.Empty;
+    private string selectedCategory = string.Empty;
+    private string selectedMaterial = string.Empty;
+    private string sortMode         = "price_asc";
+    private int    minPrice         = 0;
+    private int    maxPrice         = 400000;
+    private int    absoluteMax      = 400000;
+    private bool   inStockOnly      = false;
+    private bool   loading          = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories  = (await BeadService.GetCategoriesAsync()).ToList();
+        var items   = (await BeadService.GetAllAsync(500)).ToList();
+        allProducts = items.Select(p => new RecommendationDto(
+            p.Id, p.Name, p.Price, p.Material,
+            p.CategoryName, p.CategoryId, p.Description, 0, p.StockQuantity)).ToList();
+
+        materials = allProducts.Select(p => p.Material)
+            .Distinct().OrderBy(m => m).ToList();
+
+        absoluteMax = (int)Math.Ceiling((double)(allProducts.Any() ? allProducts.Max(p => p.Price) : 400000));
+        maxPrice    = absoluteMax;
+
+        // Применяем query-параметры
+        if (!string.IsNullOrEmpty(FilterCategory)) selectedCategory = FilterCategory;
+        if (!string.IsNullOrEmpty(SearchQuery))    searchInput      = SearchQuery;
+        if (!string.IsNullOrEmpty(SortParam))      sortMode         = SortParam;
+
+        loading = false;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        var query = allProducts.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchInput))
+        {
+            var q = searchInput.ToLowerInvariant();
+            query = query.Where(p =>
+                p.Name.ToLowerInvariant().Contains(q) ||
+                p.Material.ToLowerInvariant().Contains(q) ||
+                p.CategoryName.ToLowerInvariant().Contains(q) ||
+                (p.Description?.ToLowerInvariant().Contains(q) ?? false));
+        }
+
+        if (!string.IsNullOrEmpty(selectedCategory))
+            query = query.Where(p => p.CategoryName == selectedCategory);
+
+        if (!string.IsNullOrEmpty(selectedMaterial))
+            query = query.Where(p => p.Material.Equals(selectedMaterial, StringComparison.OrdinalIgnoreCase));
+
+        query = query.Where(p => (int)p.Price >= minPrice && (int)p.Price <= maxPrice);
+
+        if (inStockOnly)
+            query = query.Where(p => p.StockQuantity > 0);  // StockQuantity из RecommendationDto
+
+        query = sortMode switch
+        {
+            "price_desc" => query.OrderByDescending(p => p.Price),
+            "name"       => query.OrderBy(p => p.Name),
+            "popular"    => query.OrderByDescending(p => p.StockQuantity > 0).ThenBy(p => p.Price),
+            _            => query.OrderBy(p => p.Price)
+        };
+
+        filtered = query.ToList();
+        StateHasChanged();
+    }
+
+    private void SetSort(string mode)
+    {
+        sortMode = mode;
+        ApplyFilter();
+    }
+
+    private void ResetFilters()
+    {
+        searchInput      = string.Empty;
+        selectedCategory = string.Empty;
+        selectedMaterial = string.Empty;
+        minPrice         = 0;
+        maxPrice         = absoluteMax;
+        inStockOnly      = false;
+        sortMode         = "price_asc";
+        ApplyFilter();
+        Nav.NavigateTo("/catalog");
+    }
+}

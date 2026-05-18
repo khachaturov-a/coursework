@@ -1,0 +1,128 @@
+@inject ICartService CartService
+@inject IFavoriteService FavoriteService
+@inject NavigationManager Nav
+
+<div class="product-card @(IsNew ? "product-card--new" : "")" @onclick="GoToProduct">
+    <!-- Обложка -->
+    <div class="product-card__cover cat-@GetCatClass()">
+        <div class="product-card__overlay">
+            <span class="product-card__category">@Product.CategoryName</span>
+        </div>
+        <div class="product-card__icon-wrap">
+            <i class="bi @GetCatIcon() product-card__main-icon"></i>
+        </div>
+        @if (IsFavorite)
+        {
+            <span class="product-card__fav-badge"><i class="bi bi-heart-fill"></i></span>
+        }
+        @if (Product.StockQuantity == 0)
+        {
+            <span class="product-card__out-badge">Нет в наличии</span>
+        }
+    </div>
+
+    <!-- Информация -->
+    <div class="product-card__body">
+        <h3 class="product-card__name">@Product.Name</h3>
+        <p class="product-card__material">
+            <i class="bi bi-circle-fill me-1" style="font-size:6px;"></i>@Product.Material
+        </p>
+        @if (!string.IsNullOrEmpty(Product.Description))
+        {
+            <p class="product-card__desc">@TruncateDescription(Product.Description)</p>
+        }
+        <div class="product-card__footer">
+            <span class="product-card__price">@FormatPrice(Product.Price)</span>
+            <div class="product-card__actions">
+                <button class="btn-icon fav-btn @(IsFavorite ? "active" : "")"
+                        @onclick:stopPropagation="true"
+                        @onclick="ToggleFavorite"
+                        title="@(IsFavorite ? "Убрать из избранного" : "В избранное")">
+                    <i class="bi @(IsFavorite ? "bi-heart-fill" : "bi-heart")"></i>
+                </button>
+                <button class="btn-icon cart-btn @(InCart ? "active" : "")"
+                        disabled="@(Product.StockQuantity == 0)"
+                        @onclick:stopPropagation="true"
+                        @onclick="AddToCart"
+                        title="В корзину">
+                    <i class="bi @(InCart ? "bi-cart-check-fill" : "bi-cart-plus")"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RecommendationDto Product { get; set; } = null!;
+    [Parameter] public string  SessionId  { get; set; } = string.Empty;
+    [Parameter] public bool    IsNew      { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool IsFavorite;
+    private bool InCart;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrEmpty(SessionId)) return;
+        IsFavorite = await FavoriteService.IsFavoriteAsync(SessionId, Product.Id);
+        var cart   = await CartService.GetCartAsync(SessionId);
+        InCart     = cart.Any(c => c.ChetkasId == Product.Id);
+    }
+
+    private async Task ToggleFavorite()
+    {
+        if (string.IsNullOrEmpty(SessionId)) return;
+        await FavoriteService.ToggleFavoriteAsync(SessionId, Product.Id);
+        IsFavorite = !IsFavorite;
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task AddToCart()
+    {
+        if (string.IsNullOrEmpty(SessionId) || Product.StockQuantity == 0) return;
+        await CartService.AddToCartAsync(SessionId, Product.Id);
+        InCart = true;
+        await OnChanged.InvokeAsync();
+    }
+
+    private void GoToProduct() => Nav.NavigateTo($"/product/{Product.Id}");
+
+    private string GetCatClass() => Product.CategoryName switch
+    {
+        "Религиозные"   => "rel",
+        "Деревянные"    => "wood",
+        "Янтарные"      => "amb",
+        "Каменные"      => "stone",
+        "Коралловые"    => "coral",
+        "Хрустальные"   => "cryst",
+        "Металлические" => "metal",
+        "Антистресс"    => "anti",
+        "Коллекционные" => "coll",
+        "Роскошные"     => "lux",
+        _               => "default"
+    };
+
+    private string GetCatIcon() => Product.CategoryName switch
+    {
+        "Религиозные"   => "bi-moon-stars",
+        "Деревянные"    => "bi-tree",
+        "Янтарные"      => "bi-sun",
+        "Каменные"      => "bi-diamond",
+        "Коралловые"    => "bi-flower1",
+        "Хрустальные"   => "bi-stars",
+        "Металлические" => "bi-link-45deg",
+        "Антистресс"    => "bi-emoji-smile",
+        "Коллекционные" => "bi-award",
+        "Роскошные"     => "bi-gem",
+        _               => "bi-circle"
+    };
+
+    private static string FormatPrice(decimal price) =>
+        price >= 1000
+            ? $"{price / 1000:0.##} {(price >= 1000 ? "т" : "")}₽"
+            : $"{price:0} ₽";
+
+    private static string TruncateDescription(string? desc) =>
+        string.IsNullOrEmpty(desc) ? "" :
+        desc.Length > 80 ? desc[..77] + "..." : desc;
+}

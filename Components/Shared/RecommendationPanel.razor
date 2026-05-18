@@ -1,0 +1,74 @@
+@inject IRecommendationService RecommendationService
+
+<section class="recommendations-section">
+    <div class="section-header">
+        <h2 class="section-title">
+            <i class="bi bi-stars me-2 gold-icon"></i>@Title
+        </h2>
+        @if (!string.IsNullOrEmpty(Subtitle))
+        {
+            <p class="section-subtitle">@Subtitle</p>
+        }
+    </div>
+
+    @if (loading)
+    {
+        <div class="loading-row">
+            @for (int i = 0; i < 4; i++)
+            {
+                <div class="skeleton-card"></div>
+            }
+        </div>
+    }
+    else if (items.Count == 0)
+    {
+        <div class="empty-recs">
+            <i class="bi bi-search fs-1 text-muted"></i>
+            <p>Просматривайте товары, чтобы получать персональные рекомендации</p>
+        </div>
+    }
+    else
+    {
+        <div class="products-grid">
+            @foreach (var item in items)
+            {
+                <ProductCard Product="@item"
+                             SessionId="@SessionId"
+                             OnChanged="LoadRecommendations" />
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public string  SessionId  { get; set; } = string.Empty;
+    [Parameter] public int?    SourceId   { get; set; }
+    [Parameter] public string  Title      { get; set; } = "Рекомендовано для вас";
+    [Parameter] public string? Subtitle   { get; set; }
+    [Parameter] public int     Count      { get; set; } = 8;
+
+    private List<RecommendationDto> items = new();
+    private bool loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(SessionId))
+            await LoadRecommendations();
+    }
+
+    private async Task LoadRecommendations()
+    {
+        loading = true;
+        try
+        {
+            items = SourceId.HasValue
+                ? await RecommendationService.GetSimilarAsync(SourceId.Value, Count)
+                : await RecommendationService.GetRecommendationsAsync(SessionId, Count);
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+}

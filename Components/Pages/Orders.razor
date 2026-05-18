@@ -1,0 +1,114 @@
+@page "/orders"
+@inject IOrderService OrderService
+@inject SessionService Session
+
+<PageTitle>Мои заказы — Чётки</PageTitle>
+
+<div class="container py-4">
+    <h1 class="page-title"><i class="bi bi-bag me-2"></i>Мои заказы</h1>
+
+    @if (!Session.IsInitialized || loading)
+    {
+        <div class="loading-spinner"><div class="spinner"></div></div>
+    }
+    else if (orders.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="bi bi-bag-x fs-1"></i>
+            <h3>Заказов пока нет</h3>
+            <p>Оформите первый заказ в нашем магазине</p>
+            <a href="/catalog" class="btn btn-gold mt-3">В каталог</a>
+        </div>
+    }
+    else
+    {
+        <div class="orders-list">
+            @foreach (var order in orders)
+            {
+                <div class="order-card @(expandedId == order.Id ? "expanded" : "")">
+                    <div class="order-card__header" @onclick="() => Toggle(order.Id)">
+                        <div class="order-card__info">
+                            <span class="order-id">Заказ #@order.Id</span>
+                            <span class="order-date">@order.CreatedAt.ToLocalTime().ToString("dd MMMM yyyy, HH:mm")</span>
+                        </div>
+                        <div class="order-card__right">
+                            <span class="order-status @GetStatusClass(order.Status)">@order.Status</span>
+                            <span class="order-total">@order.TotalAmount.ToString("N0") ₽</span>
+                            <i class="bi @(expandedId == order.Id ? "bi-chevron-up" : "bi-chevron-down") expand-icon"></i>
+                        </div>
+                    </div>
+
+                    @if (expandedId == order.Id)
+                    {
+                        <div class="order-card__body">
+                            <table class="order-items-table">
+                                <thead>
+                                    <tr>
+                                        <th>Товар</th>
+                                        <th>Кол-во</th>
+                                        <th>Цена</th>
+                                        <th>Сумма</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in order.Items)
+                                    {
+                                        <tr>
+                                            <td><a href="/product/@item.ChetkasId">@item.Name</a></td>
+                                            <td>@item.Quantity шт.</td>
+                                            <td>@item.UnitPrice.ToString("N0") ₽</td>
+                                            <td>@item.Subtotal.ToString("N0") ₽</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3"><strong>Итого</strong></td>
+                                        <td><strong>@order.TotalAmount.ToString("N0") ₽</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<OrderDto> orders = new();
+    private bool  loading    = true;
+    private int?  expandedId = null;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if ((firstRender || loading) && Session.IsInitialized)
+            await Load();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Session.IsInitialized) await Load();
+    }
+
+    private async Task Load()
+    {
+        loading = true;
+        orders  = await OrderService.GetOrdersAsync(Session.SessionId);
+        if (orders.Count > 0) expandedId = orders[0].Id;
+        loading = false;
+        StateHasChanged();
+    }
+
+    private void Toggle(int id) => expandedId = expandedId == id ? null : id;
+
+    private static string GetStatusClass(string status) => status switch
+    {
+        "Обрабатывается" => "status-pending",
+        "Отправлен"      => "status-shipped",
+        "Доставлен"      => "status-delivered",
+        "Отменён"        => "status-cancelled",
+        _                => "status-pending"
+    };
+}

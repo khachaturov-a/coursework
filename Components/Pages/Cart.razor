@@ -1,0 +1,173 @@
+@page "/cart"
+@inject ICartService CartService
+@inject IOrderService OrderService
+@inject SessionService Session
+@inject NavigationManager Nav
+
+<PageTitle>Корзина — Чётки</PageTitle>
+
+<div class="container py-4">
+    <h1 class="page-title"><i class="bi bi-cart3 me-2"></i>Корзина</h1>
+
+    @if (!Session.IsInitialized || loading)
+    {
+        <div class="loading-spinner"><div class="spinner"></div></div>
+    }
+    else if (items.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="bi bi-cart-x fs-1"></i>
+            <h3>Корзина пуста</h3>
+            <p>Добавьте понравившиеся чётки из каталога</p>
+            <a href="/catalog" class="btn btn-gold mt-3">Перейти в каталог</a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            <!-- Список товаров -->
+            <div class="col-lg-8">
+                <div class="cart-list">
+                    @foreach (var item in items)
+                    {
+                        <div class="cart-item">
+                            <div class="cart-item__cover cat-@GetCatClass(item.CategoryName)">
+                                <i class="bi @GetCatIcon(item.CategoryName)"></i>
+                            </div>
+                            <div class="cart-item__info">
+                                <a href="/product/@item.ChetkasId" class="cart-item__name">@item.Name</a>
+                                <span class="cart-item__material">@item.Material · @item.CategoryName</span>
+                                <span class="cart-item__unit-price">@item.Price.ToString("N0") ₽ / шт.</span>
+                            </div>
+                            <div class="cart-item__qty">
+                                <button class="qty-btn" @onclick="() => ChangeQty(item, -1)">−</button>
+                                <span class="qty-val">@item.Quantity</span>
+                                <button class="qty-btn" @onclick="() => ChangeQty(item, 1)">+</button>
+                            </div>
+                            <div class="cart-item__subtotal">
+                                @item.Subtotal.ToString("N0") ₽
+                            </div>
+                            <button class="cart-item__remove" @onclick="() => Remove(item)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Итог -->
+            <div class="col-lg-4">
+                <div class="order-summary">
+                    <h4 class="summary-title">Ваш заказ</h4>
+                    <div class="summary-row">
+                        <span>Товары (@items.Sum(i => i.Quantity) шт.)</span>
+                        <span>@total.ToString("N0") ₽</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Доставка</span>
+                        <span class="text-success">Бесплатно</span>
+                    </div>
+                    <hr class="summary-divider" />
+                    <div class="summary-row summary-total">
+                        <span>Итого</span>
+                        <span>@total.ToString("N0") ₽</span>
+                    </div>
+
+                    @if (!orderPlaced)
+                    {
+                        <button class="btn btn-gold w-100 mt-3" @onclick="PlaceOrder" disabled="@ordering">
+                            @if (ordering)
+                            { <span class="spinner-border spinner-border-sm me-2"></span> }
+                            <i class="bi bi-bag-check me-2"></i>Оформить заказ
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="order-success">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <p>Заказ оформлен! <a href="/orders">Мои заказы</a></p>
+                        </div>
+                    }
+
+                    <a href="/catalog" class="btn btn-outline-secondary w-100 mt-2">
+                        <i class="bi bi-arrow-left me-2"></i>Продолжить покупки
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<CartItemDto> items = new();
+    private decimal total;
+    private bool loading   = true;
+    private bool ordering  = false;
+    private bool orderPlaced = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && Session.IsInitialized)
+            await LoadCart();
+        else if (Session.IsInitialized && loading)
+            await LoadCart();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Session.IsInitialized)
+            await LoadCart();
+    }
+
+    private async Task LoadCart()
+    {
+        loading = true;
+        items   = await CartService.GetCartAsync(Session.SessionId);
+        total   = items.Sum(i => i.Subtotal);
+        loading = false;
+        StateHasChanged();
+    }
+
+    private async Task ChangeQty(CartItemDto item, int delta)
+    {
+        var newQty = item.Quantity + delta;
+        await CartService.UpdateQuantityAsync(Session.SessionId, item.Id, newQty);
+        await LoadCart();
+    }
+
+    private async Task Remove(CartItemDto item)
+    {
+        await CartService.RemoveFromCartAsync(Session.SessionId, item.Id);
+        await LoadCart();
+    }
+
+    private async Task PlaceOrder()
+    {
+        ordering = true;
+        try
+        {
+            await OrderService.PlaceOrderAsync(Session.SessionId);
+            orderPlaced = true;
+            items.Clear();
+            total = 0;
+        }
+        finally { ordering = false; }
+    }
+
+    private static string GetCatClass(string cat) => cat switch
+    {
+        "Религиозные" => "rel", "Деревянные" => "wood", "Янтарные" => "amb",
+        "Каменные" => "stone", "Коралловые" => "coral", "Хрустальные" => "cryst",
+        "Металлические" => "metal", "Антистресс" => "anti",
+        "Коллекционные" => "coll", "Роскошные" => "lux", _ => "default"
+    };
+
+    private static string GetCatIcon(string cat) => cat switch
+    {
+        "Религиозные" => "bi-moon-stars", "Деревянные" => "bi-tree",
+        "Янтарные" => "bi-sun", "Каменные" => "bi-diamond",
+        "Коралловые" => "bi-flower1", "Хрустальные" => "bi-stars",
+        "Металлические" => "bi-link-45deg", "Антистресс" => "bi-emoji-smile",
+        "Коллекционные" => "bi-award", "Роскошные" => "bi-gem", _ => "bi-circle"
+    };
+}

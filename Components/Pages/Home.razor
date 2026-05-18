@@ -1,0 +1,148 @@
+@page "/"
+@inject IBeadService BeadService
+@inject IRecommendationService RecService
+@inject SessionService Session
+@inject NavigationManager Nav
+
+<PageTitle>Чётки — магазин сувениров</PageTitle>
+
+<!-- Hero -->
+<section class="hero-section">
+    <div class="hero-bg"></div>
+    <div class="container hero-content">
+        <div class="hero-badge">Авторские изделия со всего мира</div>
+        <h1 class="hero-title">Чётки — искусство<br />в ваших руках</h1>
+        <p class="hero-subtitle">
+            Более 90 уникальных моделей из янтаря, природных камней, дерева и металла.
+            Православные, буддийские, декоративные — найдите свои.
+        </p>
+        <div class="hero-actions">
+            <a href="/catalog" class="btn btn-gold btn-lg">
+                <i class="bi bi-grid me-2"></i>Смотреть каталог
+            </a>
+            <a href="/catalog?cat=Роскошные" class="btn btn-outline-gold btn-lg ms-3">
+                <i class="bi bi-gem me-2"></i>Роскошная коллекция
+            </a>
+        </div>
+        <div class="hero-stats">
+            <div class="stat"><span class="stat-num">10</span><span class="stat-label">категорий</span></div>
+            <div class="stat"><span class="stat-num">96</span><span class="stat-label">товаров</span></div>
+            <div class="stat"><span class="stat-num">∞</span><span class="stat-label">удовольствия</span></div>
+        </div>
+    </div>
+</section>
+
+<!-- Категории -->
+<section class="section-pad">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Категории</h2>
+            <p class="section-subtitle">Выберите стиль — мы найдём ваши чётки</p>
+        </div>
+        <div class="categories-grid">
+            @foreach (var cat in categoryIcons)
+            {
+                <a href="/catalog?cat=@Uri.EscapeDataString(cat.Key)" class="cat-card cat-@cat.Value.cls">
+                    <i class="bi @cat.Value.icon cat-card__icon"></i>
+                    <span class="cat-card__name">@cat.Key</span>
+                </a>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Рекомендации -->
+@if (Session.IsInitialized)
+{
+    <section class="section-pad section-dark">
+        <div class="container">
+            <RecommendationPanel SessionId="@Session.SessionId"
+                                 Title="Рекомендовано для вас"
+                                 Subtitle="На основе ваших просмотров, избранного и покупок"
+                                 Count="8" />
+        </div>
+    </section>
+}
+
+<!-- Топ продаж -->
+<section class="section-pad">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="bi bi-fire me-2 gold-icon"></i>Популярные товары
+            </h2>
+            <a href="/catalog?sort=popular" class="section-link">Все товары <i class="bi bi-arrow-right"></i></a>
+        </div>
+        @if (popular.Count > 0)
+        {
+            <div class="products-grid">
+                @foreach (var item in popular)
+                {
+                    <ProductCard Product="@item" SessionId="@Session.SessionId" IsNew="@false" OnChanged="StateHasChanged" />
+                }
+            </div>
+        }
+        else
+        {
+            <div class="loading-row">
+                @for (int i = 0; i < 4; i++) { <div class="skeleton-card"></div> }
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Баннер-блок -->
+<section class="promo-section">
+    <div class="container">
+        <div class="promo-grid">
+            <div class="promo-card promo-amber">
+                <i class="bi bi-sun promo-icon"></i>
+                <h3>Янтарная коллекция</h3>
+                <p>Балтийский янтарь прямо к вашим пальцам</p>
+                <a href="/catalog?cat=Янтарные" class="btn btn-sm btn-outline-gold">Смотреть</a>
+            </div>
+            <div class="promo-card promo-luxury">
+                <i class="bi bi-gem promo-icon"></i>
+                <h3>Роскошные чётки</h3>
+                <p>Золото, рубины, сапфиры — для особых случаев</p>
+                <a href="/catalog?cat=Роскошные" class="btn btn-sm btn-outline-gold">Смотреть</a>
+            </div>
+            <div class="promo-card promo-anti">
+                <i class="bi bi-emoji-smile promo-icon"></i>
+                <h3>Антистресс</h3>
+                <p>Успокоиться в любой ситуации</p>
+                <a href="/catalog?cat=Антистресс" class="btn btn-sm btn-outline-gold">Смотреть</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    private List<RecommendationDto> popular = new();
+
+    private static readonly Dictionary<string, (string cls, string icon)> categoryIcons = new()
+    {
+        ["Религиозные"]   = ("rel",   "bi-moon-stars"),
+        ["Деревянные"]    = ("wood",  "bi-tree"),
+        ["Янтарные"]      = ("amb",   "bi-sun"),
+        ["Каменные"]      = ("stone", "bi-diamond"),
+        ["Коралловые"]    = ("coral", "bi-flower1"),
+        ["Хрустальные"]   = ("cryst", "bi-stars"),
+        ["Металлические"] = ("metal", "bi-link-45deg"),
+        ["Антистресс"]    = ("anti",  "bi-emoji-smile"),
+        ["Коллекционные"] = ("coll",  "bi-award"),
+        ["Роскошные"]     = ("lux",   "bi-gem"),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var all = await BeadService.GetAllAsync(200);
+        popular = all
+            .OrderByDescending(p => p.StockQuantity)
+            .Take(8)
+            .Select(p => new RecommendationDto(
+                p.Id, p.Name, p.Price, p.Material,
+                p.CategoryName, p.CategoryId, p.Description, 0, p.StockQuantity))
+            .ToList();
+    }
+}

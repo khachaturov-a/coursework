@@ -1,0 +1,94 @@
+@inherits LayoutComponentBase
+@inject SessionService Session
+@inject ProtectedLocalStorage LocalStorage
+@inject ICartService CartService
+@inject IFavoriteService FavoriteService
+@inject NavigationManager Nav
+
+<div class="app-shell">
+    <NavMenu CartCount="@cartCount" FavCount="@favCount" OnSearch="HandleSearch" />
+
+    <main class="main-content">
+        @Body
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <h5 class="footer-brand">
+                        <i class="bi bi-gem me-2"></i>Чётки
+                    </h5>
+                    <p class="footer-text">Магазин авторских и коллекционных чёток со всего мира. Каждое изделие несёт в себе историю и мастерство.</p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="footer-heading">Каталог</h6>
+                    <ul class="footer-links">
+                        <li><a href="/catalog">Все товары</a></li>
+                        <li><a href="/catalog?cat=Религиозные">Религиозные</a></li>
+                        <li><a href="/catalog?cat=Роскошные">Роскошные</a></li>
+                        <li><a href="/catalog?cat=Коллекционные">Коллекционные</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="footer-heading">Информация</h6>
+                    <ul class="footer-links">
+                        <li><a href="/cart">Корзина</a></li>
+                        <li><a href="/favorites">Избранное</a></li>
+                        <li><a href="/orders">Мои заказы</a></li>
+                        <li><a href="/swagger">API документация</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="footer-divider" />
+            <p class="footer-copy">© 2026 Магазин чёток. Все права защищены.</p>
+        </div>
+    </footer>
+</div>
+
+@code {
+    private int cartCount;
+    private int favCount;
+    private bool initialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !Session.IsInitialized)
+        {
+            var result = await LocalStorage.GetAsync<string>("bead_session_id");
+            var sid = result.Success && !string.IsNullOrEmpty(result.Value)
+                ? result.Value
+                : Guid.NewGuid().ToString("N");
+
+            if (!result.Success)
+                await LocalStorage.SetAsync("bead_session_id", sid);
+
+            Session.Initialize(sid);
+            await RefreshCounters();
+            initialized = true;
+            StateHasChanged();
+        }
+        else if (Session.IsInitialized && !initialized)
+        {
+            await RefreshCounters();
+            initialized = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshCounters()
+    {
+        if (!Session.IsInitialized) return;
+        cartCount = await CartService.GetCartCountAsync(Session.SessionId);
+        favCount  = await FavoriteService.GetFavoritesCountAsync(Session.SessionId);
+    }
+
+    private void HandleSearch(string query)
+    {
+        if (!string.IsNullOrWhiteSpace(query))
+            Nav.NavigateTo($"/catalog?q={Uri.EscapeDataString(query)}");
+    }
+
+    // Метод для дочерних страниц — обновить счётчики после добавления в корзину/избранное
+    public async Task NotifyCountersChanged() => await RefreshCounters();
+}

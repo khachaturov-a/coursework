@@ -1,0 +1,196 @@
+@page "/product/{Id:int}"
+@inject IBeadService BeadService
+@inject ICartService CartService
+@inject IFavoriteService FavoriteService
+@inject IRecommendationService RecService
+@inject SessionService Session
+@inject NavigationManager Nav
+
+<PageTitle>@(product?.Name ?? "Товар") — Чётки</PageTitle>
+
+@if (product is null)
+{
+    <div class="container py-5 text-center">
+        @if (notFound)
+        {
+            <div class="empty-state">
+                <i class="bi bi-exclamation-circle fs-1"></i>
+                <h3>Товар не найден</h3>
+                <a href="/catalog" class="btn btn-gold mt-3">В каталог</a>
+            </div>
+        }
+        else
+        {
+            <div class="loading-spinner"><div class="spinner"></div></div>
+        }
+    </div>
+}
+else
+{
+    <div class="container py-4">
+        <!-- Хлебные крошки -->
+        <nav class="breadcrumb-nav">
+            <a href="/">Главная</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/catalog">Каталог</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/catalog?cat=@Uri.EscapeDataString(product.CategoryName)">@product.CategoryName</a>
+            <i class="bi bi-chevron-right"></i>
+            <span>@product.Name</span>
+        </nav>
+
+        <div class="row g-5">
+            <!-- Обложка товара -->
+            <div class="col-md-5">
+                <div class="product-detail__cover cat-@GetCatClass()">
+                    <i class="bi @GetCatIcon() product-detail__icon"></i>
+                    <span class="product-detail__cat-badge">@product.CategoryName</span>
+                </div>
+            </div>
+
+            <!-- Информация -->
+            <div class="col-md-7">
+                <h1 class="product-detail__name">@product.Name</h1>
+
+                <div class="product-detail__meta">
+                    <span class="meta-item">
+                        <i class="bi bi-gem me-1"></i>@product.Material
+                    </span>
+                    <span class="meta-item">
+                        <i class="bi bi-tag me-1"></i>@product.CategoryName
+                    </span>
+                    <span class="meta-item @(product.StockQuantity > 0 ? "in-stock" : "out-stock")">
+                        <i class="bi @(product.StockQuantity > 0 ? "bi-check-circle" : "bi-x-circle") me-1"></i>
+                        @(product.StockQuantity > 0 ? $"В наличии: {product.StockQuantity} шт." : "Нет в наличии")
+                    </span>
+                </div>
+
+                @if (!string.IsNullOrEmpty(product.Description))
+                {
+                    <p class="product-detail__desc">@product.Description</p>
+                }
+
+                <div class="product-detail__price-row">
+                    <span class="product-detail__price">@product.Price.ToString("N0") ₽</span>
+                </div>
+
+                <div class="product-detail__actions">
+                    <div class="quantity-control">
+                        <button class="qty-btn" @onclick="DecQty">−</button>
+                        <span class="qty-val">@quantity</span>
+                        <button class="qty-btn" @onclick="IncQty">+</button>
+                    </div>
+
+                    <button class="btn btn-gold btn-add-cart @(inCart ? "added" : "")"
+                            disabled="@(product.StockQuantity == 0)"
+                            @onclick="AddToCart">
+                        <i class="bi @(inCart ? "bi-cart-check-fill" : "bi-cart-plus") me-2"></i>
+                        @(inCart ? "Добавлено в корзину" : "В корзину")
+                    </button>
+
+                    <button class="btn-icon fav-btn lg @(isFav ? "active" : "")" @onclick="ToggleFav"
+                            title="@(isFav ? "Убрать из избранного" : "В избранное")">
+                        <i class="bi @(isFav ? "bi-heart-fill" : "bi-heart")"></i>
+                    </button>
+                </div>
+
+                @if (notification is not null)
+                {
+                    <div class="notification @notificationClass">
+                        <i class="bi bi-check-circle me-2"></i>@notification
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Похожие товары -->
+        <div class="mt-5">
+            <RecommendationPanel SessionId="@Session.SessionId"
+                                 SourceId="@Id"
+                                 Title="Похожие товары"
+                                 Subtitle="Вам может понравиться"
+                                 Count="6" />
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ChetkasDto? product;
+    private bool notFound;
+    private bool isFav;
+    private bool inCart;
+    private int  quantity = 1;
+    private string? notification;
+    private string  notificationClass = "notification--success";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        product  = null;
+        notFound = false;
+        notification = null;
+
+        var all = await BeadService.GetAllAsync(500);
+        product = all.FirstOrDefault(p => p.Id == Id);
+
+        if (product is null) { notFound = true; return; }
+
+        if (Session.IsInitialized)
+        {
+            await RecService.RecordViewAsync(Session.SessionId, Id);
+            isFav  = await FavoriteService.IsFavoriteAsync(Session.SessionId, Id);
+            var cart = await CartService.GetCartAsync(Session.SessionId);
+            inCart = cart.Any(c => c.ChetkasId == Id);
+        }
+    }
+
+    private void IncQty() => quantity = Math.Min(quantity + 1, Math.Max(1, product?.StockQuantity ?? 1));
+    private void DecQty() => quantity = Math.Max(1, quantity - 1);
+
+    private async Task AddToCart()
+    {
+        if (!Session.IsInitialized || product?.StockQuantity == 0) return;
+        await CartService.AddToCartAsync(Session.SessionId, Id, quantity);
+        inCart = true;
+        ShowNotification("Добавлено в корзину!", "notification--success");
+    }
+
+    private async Task ToggleFav()
+    {
+        if (!Session.IsInitialized) return;
+        await FavoriteService.ToggleFavoriteAsync(Session.SessionId, Id);
+        isFav = !isFav;
+        ShowNotification(isFav ? "Добавлено в избранное" : "Удалено из избранного", "notification--info");
+    }
+
+    private async void ShowNotification(string msg, string cls)
+    {
+        notification = msg;
+        notificationClass = cls;
+        StateHasChanged();
+        await Task.Delay(3000);
+        notification = null;
+        StateHasChanged();
+    }
+
+    private string GetCatClass() => product?.CategoryName switch
+    {
+        "Религиозные"   => "rel",   "Деревянные"    => "wood",
+        "Янтарные"      => "amb",   "Каменные"      => "stone",
+        "Коралловые"    => "coral", "Хрустальные"   => "cryst",
+        "Металлические" => "metal", "Антистресс"    => "anti",
+        "Коллекционные" => "coll",  "Роскошные"     => "lux",
+        _               => "default"
+    };
+
+    private string GetCatIcon() => product?.CategoryName switch
+    {
+        "Религиозные"   => "bi-moon-stars", "Деревянные"    => "bi-tree",
+        "Янтарные"      => "bi-sun",        "Каменные"      => "bi-diamond",
+        "Коралловые"    => "bi-flower1",    "Хрустальные"   => "bi-stars",
+        "Металлические" => "bi-link-45deg", "Антистресс"    => "bi-emoji-smile",
+        "Коллекционные" => "bi-award",      "Роскошные"     => "bi-gem",
+        _               => "bi-circle"
+    };
+}
