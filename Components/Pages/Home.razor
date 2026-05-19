@@ -26,7 +26,7 @@
         </div>
         <div class="hero-stats">
             <div class="stat"><span class="stat-num">10</span><span class="stat-label">категорий</span></div>
-            <div class="stat"><span class="stat-num">96</span><span class="stat-label">товаров</span></div>
+            <div class="stat"><span class="stat-num">50</span><span class="stat-label">товаров</span></div>
             <div class="stat"><span class="stat-num">∞</span><span class="stat-label">удовольствия</span></div>
         </div>
     </div>
@@ -42,11 +42,40 @@
         <div class="categories-grid">
             @foreach (var cat in categoryIcons)
             {
+                var coverId = categoryCover[cat.Key];
                 <a href="/catalog?cat=@Uri.EscapeDataString(cat.Key)" class="cat-card cat-@cat.Value.cls">
-                    <i class="bi @cat.Value.icon cat-card__icon"></i>
+                    <div class="cat-card__img">
+                        <img src="/images/products/@(coverId).jpeg"
+                             alt="@cat.Key"
+                             class="cat-card__photo"
+                             onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
+                        <i class="bi @cat.Value.icon cat-card__icon" style="display:none"></i>
+                    </div>
                     <span class="cat-card__name">@cat.Key</span>
                 </a>
             }
+        </div>
+    </div>
+</section>
+
+<!-- Quiz promo -->
+<section class="quiz-promo-section">
+    <div class="container">
+        <div class="quiz-promo-card">
+            <div class="quiz-promo__content">
+                <span class="quiz-promo__label"><i class="bi bi-stars me-1"></i>Персональный подбор</span>
+                <h2 class="quiz-promo__title">Не знаете, какие чётки вам подойдут?</h2>
+                <p class="quiz-promo__text">
+                    Пройдите тест из 10 вопросов о вашем характере — и мы найдём чётки,
+                    которые идеально совпадают с вашей энергетикой. Занимает 3 минуты.
+                </p>
+                <a href="/quiz" class="btn btn-gold btn-lg">
+                    <i class="bi bi-play-fill me-2"></i>Пройти тест
+                </a>
+            </div>
+            <div class="quiz-promo__deco" aria-hidden="true">
+                <i class="bi bi-stars"></i>
+            </div>
         </div>
     </div>
 </section>
@@ -75,7 +104,7 @@
         </div>
         @if (popular.Count > 0)
         {
-            <div class="products-grid">
+            <div class="products-grid products-grid--featured">
                 @foreach (var item in popular)
                 {
                     <ProductCard Product="@item" SessionId="@Session.SessionId" IsNew="@false" OnChanged="StateHasChanged" />
@@ -119,6 +148,20 @@
 
 @code {
     private List<RecommendationDto> popular = new();
+
+    private static readonly Dictionary<string, int> categoryCover = new()
+    {
+        ["Религиозные"]   = 9,
+        ["Деревянные"]    = 14,
+        ["Янтарные"]      = 20,
+        ["Каменные"]      = 24,
+        ["Коралловые"]    = 29,
+        ["Хрустальные"]   = 34,
+        ["Металлические"] = 40,
+        ["Антистресс"]    = 46,
+        ["Коллекционные"] = 51,
+        ["Роскошные"]     = 56,
+    };
 
     private static readonly Dictionary<string, (string cls, string icon)> categoryIcons = new()
     {

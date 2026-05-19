@@ -1,12 +1,18 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 @inject SessionService Session
 @inject ProtectedLocalStorage LocalStorage
 @inject ICartService CartService
 @inject IFavoriteService FavoriteService
+@inject CounterNotifier CounterNotifier
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <div class="app-shell">
-    <NavMenu CartCount="@cartCount" FavCount="@favCount" OnSearch="HandleSearch" />
+    <NavMenu CartCount="@cartCount" FavCount="@favCount"
+             OnSearch="HandleSearch"
+             CurrentTheme="@currentTheme"
+             OnThemeToggle="ToggleTheme" />
 
     <main class="main-content">
         @Body
@@ -47,33 +53,49 @@
 </div>
 
 @code {
-    private int cartCount;
-    private int favCount;
-    private bool initialized;
+    private int    cartCount;
+    private int    favCount;
+    private string currentTheme = "light";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !Session.IsInitialized)
+        if (firstRender)
         {
-            var result = await LocalStorage.GetAsync<string>("bead_session_id");
-            var sid = result.Success && !string.IsNullOrEmpty(result.Value)
-                ? result.Value
-                : Guid.NewGuid().ToString("N");
+            CounterNotifier.OnCountersChanged += HandleCountersChanged;
 
-            if (!result.Success)
-                await LocalStorage.SetAsync("bead_session_id", sid);
+            currentTheme = await JS.InvokeAsync<string>("themeManager.get");
 
-            Session.Initialize(sid);
+            if (!Session.IsInitialized)
+            {
+                var result = await LocalStorage.GetAsync<string>("bead_session_id");
+                var sid = result.Success && !string.IsNullOrEmpty(result.Value)
+                    ? result.Value
+                    : Guid.NewGuid().ToString("N");
+
+                if (!result.Success)
+                    await LocalStorage.SetAsync("bead_session_id", sid);
+
+                Session.Initialize(sid);
+            }
+
             await RefreshCounters();
-            initialized = true;
             StateHasChanged();
         }
-        else if (Session.IsInitialized && !initialized)
-        {
-            await RefreshCounters();
-            initialized = true;
-            StateHasChanged();
-        }
+    }
+
+    private async Task HandleCountersChanged()
+    {
+        await RefreshCounters();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => CounterNotifier.OnCountersChanged -= HandleCountersChanged;
+
+    private async Task ToggleTheme()
+    {
+        currentTheme = currentTheme == "light" ? "dark" : "light";
+        await JS.InvokeVoidAsync("themeManager.set", currentTheme);
+        StateHasChanged();
     }
 
     private async Task RefreshCounters()

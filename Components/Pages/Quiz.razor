@@ -1,0 +1,280 @@
+@page "/quiz"
+
+<PageTitle>Подбор чёток по характеру</PageTitle>
+
+<div class="quiz-page">
+
+    @if (step == QuizStep.Intro)
+    {
+        <section class="quiz-intro">
+            <div class="quiz-intro__bg"></div>
+            <div class="container quiz-intro__inner">
+                <span class="hero-badge">Персональный подбор</span>
+                <h1 class="quiz-intro__title">Какие чётки<br />созданы для вас?</h1>
+                <p class="quiz-intro__text">
+                    Пройдите 10 вопросов о вашем характере — и мы найдём чётки,
+                    которые идеально совпадают с вашей энергетикой
+                </p>
+                <div class="quiz-intro__features">
+                    <span><i class="bi bi-clock me-1"></i>3 минуты</span>
+                    <span><i class="bi bi-list-check me-1"></i>10 вопросов</span>
+                    <span><i class="bi bi-gem me-1"></i>Персональный результат</span>
+                </div>
+                <button class="btn btn-gold btn-lg" @onclick="() => step = QuizStep.Questions">
+                    <i class="bi bi-play-fill me-2"></i>Начать тест
+                </button>
+            </div>
+        </section>
+    }
+
+    else if (step == QuizStep.Questions)
+    {
+        var q = Questions[current];
+        <div class="quiz-question-page">
+            <div class="container">
+
+                <div class="quiz-progress">
+                    <div class="quiz-progress__track">
+                        <div class="quiz-progress__fill" style="width:@((current + 1) * 10)%"></div>
+                    </div>
+                    <span class="quiz-progress__label">@(current + 1) / @Questions.Count</span>
+                </div>
+
+                <div class="quiz-card">
+                    <p class="quiz-card__num">Вопрос @(current + 1)</p>
+                    <h2 class="quiz-card__question">@q.Text</h2>
+                    <div class="quiz-card__options">
+                        @foreach (var opt in q.Options)
+                        {
+                            <button class="quiz-option @(selected == opt.Type ? "quiz-option--chosen" : "")"
+                                    @onclick="() => Pick(opt.Type)">
+                                <span class="quiz-option__letter">@opt.Letter</span>
+                                <span class="quiz-option__text">@opt.Text</span>
+                            </button>
+                        }
+                    </div>
+                    @if (selected != null)
+                    {
+                        <div class="quiz-next-wrap">
+                            <button class="btn btn-gold" @onclick="Next">
+                                @(current < Questions.Count - 1 ? "Следующий вопрос" : "Узнать результат")
+                                <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    }
+                </div>
+
+            </div>
+        </div>
+    }
+
+    else
+    {
+        var r = GetResult();
+        <div class="quiz-result-page">
+            <div class="container">
+                <div class="quiz-result">
+
+                    <div class="quiz-result__header">
+                        <span class="quiz-result__label"><i class="bi bi-stars me-1"></i>Ваш результат</span>
+                        <p class="quiz-result__type">@r.TypeLabel</p>
+                        <h1 class="quiz-result__title">@r.Name</h1>
+                    </div>
+
+                    <div class="quiz-result__cover cat-@r.CatClass">
+                        <img src="/images/products/@(r.ProductId).jpeg"
+                             alt="@r.Name"
+                             class="quiz-result__photo"
+                             onerror="this.style.display='none';this.closest('.quiz-result__cover').querySelector('.quiz-result__icon-wrap').style.display='flex'" />
+                        <div class="quiz-result__icon-wrap" style="display:none">
+                            <i class="bi @r.Icon quiz-result__icon"></i>
+                        </div>
+                    </div>
+
+                    <blockquote class="quiz-result__quote">@r.PersonalDesc</blockquote>
+                    <p class="quiz-result__why">@r.WhyDesc</p>
+
+                    <div class="quiz-result__actions">
+                        <a href="/product/@r.ProductId" class="btn btn-gold btn-lg">
+                            <i class="bi bi-bag me-2"></i>Открыть товар
+                        </a>
+                        <a href="/catalog?cat=@Uri.EscapeDataString(r.Category)" class="btn btn-outline-gold btn-lg">
+                            <i class="bi bi-grid me-2"></i>Похожие
+                        </a>
+                        <button class="btn btn-outline-gold btn-lg" @onclick="Restart">
+                            <i class="bi bi-arrow-counterclockwise me-2"></i>Пройти снова
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    }
+
+</div>
+
+@code {
+    private enum QuizStep { Intro, Questions, Result }
+    private QuizStep step = QuizStep.Intro;
+    private int current = 0;
+    private string? selected;
+    private Dictionary<string, int> scores = new();
+
+    record QuizOption(string Letter, string Text, string Type);
+    record QuizQuestion(string Text, List<QuizOption> Options);
+    record QuizResult(
+        string Name, string TypeLabel, string CatClass, string Icon, string Category,
+        string PersonalDesc, string WhyDesc, int ProductId);
+
+    static readonly List<QuizQuestion> Questions = new()
+    {
+        new("Как вы обычно проводите свободное время?", new()
+        {
+            new("А", "Не могу усидеть на месте — всегда в движении или при деле", "A"),
+            new("Б", "Медитирую, читаю, размышляю о смысле жизни", "B"),
+            new("В", "Гуляю на природе, слушаю лес и ветер", "C"),
+        }),
+        new("Что вас больше всего притягивает в предмете?", new()
+        {
+            new("А", "Ощущение особой энергии и мистики", "D"),
+            new("Б", "Прозрачность, чистота и ясность формы", "E"),
+            new("В", "Тепло и приятность материала на ощупь", "F"),
+        }),
+        new("Каким вы видите идеальный аксессуар?", new()
+        {
+            new("А", "Живой, природный, с историей и характером", "I"),
+            new("Б", "Надёжный, современный, не требующий особого ухода", "H"),
+            new("В", "Нежный и красивый, навевающий мысли о море", "G"),
+        }),
+        new("Что для вас самое важное прямо сейчас?", new()
+        {
+            new("А", "Успех, статус и признание окружающих", "J"),
+            new("Б", "Найти способ успокоить вечно занятую голову", "A"),
+            new("В", "Духовное развитие и внутренний покой", "B"),
+        }),
+        new("Как вы справляетесь с трудностями?", new()
+        {
+            new("А", "Иду в лес или парк — природа всегда лечит", "C"),
+            new("Б", "Доверяю знакам, снам и своей интуиции", "D"),
+            new("В", "Тихо наблюдаю и жду, пока ситуация прояснится", "E"),
+        }),
+        new("Что лучше всего описывает вас в компании?", new()
+        {
+            new("А", "Я тёплый и душевный — создаю уют вокруг себя", "F"),
+            new("Б", "Я чуткий и открытый, легко привязываюсь к людям", "G"),
+            new("В", "Я рациональный — ценю факты и конкретику", "H"),
+        }),
+        new("Как вы выбираете вещи для себя?", new()
+        {
+            new("А", "Ищу что-то редкое, уникальное, с историей", "I"),
+            new("Б", "Беру лучшее из лучшего — цена вторична", "J"),
+            new("В", "Долго сравниваю и никак не могу остановиться", "A"),
+        }),
+        new("Какой цвет ближе к вашей душе?", new()
+        {
+            new("А", "Синий или фиолетовый — цвет тайны и глубины", "D"),
+            new("Б", "Золотой или белый — цвет света и духовности", "B"),
+            new("В", "Зелёный и коричневый — цвет земли и леса", "C"),
+        }),
+        new("Что вы чувствуете, стоя у воды?", new()
+        {
+            new("А", "Полный покой и ясность мыслей", "E"),
+            new("Б", "Тепло и радость — хочется остаться навсегда", "F"),
+            new("В", "Что-то романтичное, что сложно выразить словами", "G"),
+        }),
+        new("Как бы вы описали свой стиль жизни?", new()
+        {
+            new("А", "Чёткий и эффективный — без лишнего", "H"),
+            new("Б", "Насыщенный, с вниманием к деталям и редким вещам", "I"),
+            new("В", "Яркий и заметный — я не теряюсь в толпе", "J"),
+        }),
+    };
+
+    static readonly Dictionary<string, QuizResult> Results = new()
+    {
+        ["A"] = new("«Магнитные» неодимовые", "Тип: Тревожный деятель",
+            "anti", "bi-magnet", "Антистресс",
+            "Вашим рукам нужно быть заняты — так ваша голова наконец успокаивается.",
+            "Неодимовые шарики притягиваются и разлетаются сами по себе. Это не просто игрушка — для активных людей с тревожностью это лучший способ перевести фокус и снизить стресс без усилий.",
+            47),
+
+        ["B"] = new("«Мала» из рудракши", "Тип: Искатель смысла",
+            "rel", "bi-moon-stars", "Религиозные",
+            "Вы ищете ответы там, куда большинство не смотрит — внутри себя.",
+            "108 зёрен рудракши — семян священного дерева Шивы. В буддийской и индуистской традиции мала помогает войти в состояние глубокой сосредоточенности и обрести внутреннюю тишину.",
+            12),
+
+        ["C"] = new("«Экодерево» из кедра", "Тип: Человек природы",
+            "wood", "bi-tree", "Деревянные",
+            "Природа — ваш настоящий дом, и вы это прекрасно знаете.",
+            "Сибирский кедр пахнет хвоей и смолой. Исследования подтверждают: запах хвойных пород напрямую снижает уровень кортизола. Просто держите в руках — и городская суета отступает.",
+            14),
+
+        ["D"] = new("«Аметист» королевский", "Тип: Мистик и интуит",
+            "stone", "bi-diamond", "Каменные",
+            "Вы чувствуете то, что другие не видят — и это ваша настоящая сила.",
+            "Фиолетовый аметист тысячелетиями считался камнем мудрости и интуиции. Он усиливает чувствительность и создаёт энергетический щит для глубокой и тонкой натуры.",
+            24),
+
+        ["E"] = new("«Горный хрусталь» прозрачный", "Тип: Созерцатель",
+            "cryst", "bi-stars", "Хрустальные",
+            "Вам важна ясность — в мыслях, в словах и в жизни.",
+            "Кристально прозрачный горный хрусталь без единого изъяна — символ чистого разума и незамутнённого восприятия. Перебирая прозрачные зёрна, вы помогаете хаотичным мыслям выстроиться в ряд.",
+            34),
+
+        ["F"] = new("«Медовый янтарь»", "Тип: Хранитель тепла",
+            "amb", "bi-sun", "Янтарные",
+            "Вы несёте тепло в каждый дом — и люди это чувствуют рядом с вами.",
+            "Балтийский янтарь хранит солнечное тепло 50 миллионов лет. Это не метафора — янтарь буквально тёплый на ощупь. Для человека с тёплой душой это самый родной материал.",
+            19),
+
+        ["G"] = new("«Розовый коралл» нежный", "Тип: Романтик и эмпат",
+            "coral", "bi-flower1", "Коралловые",
+            "Вы тонко чувствуете мир и людей вокруг — это редкий и ценный дар.",
+            "Розовый коралл в японской традиции — символ любви, жизненной силы и искренних связей. Его нежная органическая текстура напоминает о том, что всё живое глубоко связано между собой.",
+            30),
+
+        ["H"] = new("«Сталь 316L» матовая", "Тип: Рационалист",
+            "metal", "bi-link-45deg", "Металлические",
+            "Вам не нужны украшения ради украшений — нужно то, что работает.",
+            "Медицинская нержавеющая сталь 316L: не темнеет, не окисляется, гипоаллергенная. Абсолютная надёжность без лишних слов — именно то, что ценит прагматичная и целеустремлённая натура.",
+            39),
+
+        ["I"] = new("«Греческие» из оливкового дерева", "Тип: Ценитель и эстет",
+            "coll", "bi-award", "Коллекционные",
+            "У вас вкус, который не купить — его можно только воспитать годами.",
+            "Комболои из освящённого греческого оливкового дерева — народный символ удачи с тысячелетней историей. Каждая бусина несёт средиземноморский дух и вековую традицию ручного мастерства.",
+            53),
+
+        ["J"] = new("«Золотые» из золота 585", "Тип: Человек-заявление",
+            "lux", "bi-gem", "Роскошные",
+            "Вы знаете себе цену — и не видите причин это скрывать.",
+            "120 граммов жёлтого золота 585 пробы. Ювелирная работа высшего класса. Это не просто чётки — это позиция. Для человека, который привык к лучшему и не готов соглашаться на меньшее.",
+            54),
+    };
+
+    void Pick(string type) => selected = type;
+
+    void Next()
+    {
+        if (selected == null) return;
+        scores[selected] = scores.GetValueOrDefault(selected) + 1;
+        selected = null;
+        if (current < Questions.Count - 1) current++;
+        else step = QuizStep.Result;
+    }
+
+    QuizResult GetResult()
+    {
+        var winner = scores.OrderByDescending(kv => kv.Value).FirstOrDefault().Key ?? "E";
+        return Results.GetValueOrDefault(winner, Results["E"]);
+    }
+
+    void Restart()
+    {
+        step = QuizStep.Intro;
+        current = 0;
+        selected = null;
+        scores.Clear();
+    }
+}

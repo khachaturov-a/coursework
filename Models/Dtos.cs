@@ -1,4 +1,4 @@
-namespace Practos3.Models;
+﻿namespace Coursework.Models;
 
 public record ChetkasDto(
     int     Id,

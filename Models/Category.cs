@@ -1,6 +1,6 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace Practos3.Models;
+namespace Coursework.Models;
 
 public class Category
 {

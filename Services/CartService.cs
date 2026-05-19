@@ -1,15 +1,17 @@
-using Microsoft.EntityFrameworkCore;
-using Practos3.Data;
-using Practos3.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using Coursework.Data;
+using Coursework.Models;
 
-namespace Practos3.Services;
+namespace Coursework.Services;
 
+/// <summary>Реализация <see cref="ICartService"/> на основе Entity Framework Core.</summary>
 public class CartService : ICartService
 {
     private readonly ShopContext _db;
 
     public CartService(ShopContext db) => _db = db;
 
+    /// <inheritdoc/>
     public async Task<List<CartItemDto>> GetCartAsync(string sessionId)
     {
         return await _db.CartItems
@@ -29,6 +31,7 @@ public class CartService : ICartService
             .ToListAsync();
     }
 
+    /// <inheritdoc/>
     public async Task<int> GetCartCountAsync(string sessionId)
     {
         return await _db.CartItems
@@ -36,6 +39,7 @@ public class CartService : ICartService
             .SumAsync(ci => ci.Quantity);
     }
 
+    /// <inheritdoc/>
     public async Task AddToCartAsync(string sessionId, int chetkasId, int quantity = 1)
     {
         var existing = await _db.CartItems
@@ -58,6 +62,7 @@ public class CartService : ICartService
         await _db.SaveChangesAsync();
     }
 
+    /// <inheritdoc/>
     public async Task UpdateQuantityAsync(string sessionId, int cartItemId, int quantity)
     {
         var item = await _db.CartItems
@@ -77,6 +82,7 @@ public class CartService : ICartService
         await _db.SaveChangesAsync();
     }
 
+    /// <inheritdoc/>
     public async Task RemoveFromCartAsync(string sessionId, int cartItemId)
     {
         var item = await _db.CartItems
@@ -89,6 +95,7 @@ public class CartService : ICartService
         }
     }
 
+    /// <inheritdoc/>
     public async Task ClearCartAsync(string sessionId)
     {
         var items = _db.CartItems.Where(ci => ci.SessionId == sessionId);
@@ -96,6 +103,7 @@ public class CartService : ICartService
         await _db.SaveChangesAsync();
     }
 
+    /// <inheritdoc/>
     public async Task<decimal> GetCartTotalAsync(string sessionId)
     {
         return await _db.CartItems

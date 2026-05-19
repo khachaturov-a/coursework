@@ -1,4 +1,5 @@
 @page "/cart"
+@implements IDisposable
 @inject ICartService CartService
 @inject IOrderService OrderService
 @inject SessionService Session
@@ -75,9 +76,7 @@
 
                     @if (!orderPlaced)
                     {
-                        <button class="btn btn-gold w-100 mt-3" @onclick="PlaceOrder" disabled="@ordering">
-                            @if (ordering)
-                            { <span class="spinner-border spinner-border-sm me-2"></span> }
+                        <button class="btn btn-gold w-100 mt-3" @onclick="OpenModal">
                             <i class="bi bi-bag-check me-2"></i>Оформить заказ
                         </button>
                     }
@@ -98,30 +97,95 @@
     }
 </div>
 
+@if (showModal)
+{
+    <div class="modal-backdrop fade show" style="z-index:1040" @onclick="CloseModal"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="z-index:1050" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-bag-check me-2 gold-icon"></i>Оформление заказа
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal" disabled="@ordering"></button>
+                </div>
+                <EditForm Model="orderForm" OnValidSubmit="ConfirmOrder">
+                    <FluentValidationValidator />
+                    <div class="modal-body">
+                        <p class="text-muted mb-3">
+                            Итого к оплате: <strong>@total.ToString("N0") ₽</strong>
+                            (@items.Sum(i => i.Quantity) поз.)
+                        </p>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Имя <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="orderForm.CustomerName"
+                                       placeholder="Ваше имя" />
+                            <ValidationMessage For="@(() => orderForm.CustomerName)" class="text-danger small mt-1" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Телефон <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="orderForm.CustomerPhone"
+                                       placeholder="+7 (999) 000-00-00" />
+                            <ValidationMessage For="@(() => orderForm.CustomerPhone)" class="text-danger small mt-1" />
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold">Комментарий</label>
+                            <InputTextArea class="form-control" @bind-Value="orderForm.Comment"
+                                           rows="2" placeholder="Пожелания к заказу (необязательно)" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary"
+                                @onclick="CloseModal" disabled="@ordering">Отмена</button>
+                        <button type="submit" class="btn btn-gold" disabled="@ordering">
+                            @if (ordering)
+                            { <span class="spinner-border spinner-border-sm me-2"></span> }
+                            <i class="bi bi-check-lg me-1"></i>Подтвердить заказ
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<CartItemDto> items = new();
     private decimal total;
-    private bool loading   = true;
-    private bool ordering  = false;
+    private bool loading     = true;
+    private bool ordering    = false;
     private bool orderPlaced = false;
+    private bool showModal   = false;
+    private bool _loaded     = false;
+    private OrderFormModel orderForm = new();
+
+    protected override void OnInitialized() =>
+        Session.SessionReady += OnSessionReadyHandler;
+
+    private void OnSessionReadyHandler() =>
+        InvokeAsync(async () =>
+        {
+            if (!_loaded) { _loaded = true; await LoadCart(); }
+        });
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && Session.IsInitialized)
+        if (Session.IsInitialized && !_loaded)
+        {
+            _loaded = true;
             await LoadCart();
-        else if (Session.IsInitialized && loading)
-            await LoadCart();
+        }
     }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        if (Session.IsInitialized)
-            await LoadCart();
-    }
+    public void Dispose() => Session.SessionReady -= OnSessionReadyHandler;
 
     private async Task LoadCart()
     {
         loading = true;
+        StateHasChanged();
         items   = await CartService.GetCartAsync(Session.SessionId);
         total   = items.Sum(i => i.Subtotal);
         loading = false;
@@ -141,12 +205,24 @@
         await LoadCart();
     }
 
-    private async Task PlaceOrder()
+    private void OpenModal()
+    {
+        orderForm  = new OrderFormModel();
+        showModal  = true;
+    }
+
+    private void CloseModal()
+    {
+        if (!ordering) showModal = false;
+    }
+
+    private async Task ConfirmOrder()
     {
         ordering = true;
         try
         {
             await OrderService.PlaceOrderAsync(Session.SessionId);
+            showModal   = false;
             orderPlaced = true;
             items.Clear();
             total = 0;

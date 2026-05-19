@@ -1,4 +1,5 @@
 @page "/orders"
+@implements IDisposable
 @inject IOrderService OrderService
 @inject SessionService Session
 
@@ -80,21 +81,32 @@
     private List<OrderDto> orders = new();
     private bool  loading    = true;
     private int?  expandedId = null;
+    private bool  _loaded    = false;
+
+    protected override void OnInitialized() =>
+        Session.SessionReady += OnSessionReadyHandler;
+
+    private void OnSessionReadyHandler() =>
+        InvokeAsync(async () =>
+        {
+            if (!_loaded) { _loaded = true; await Load(); }
+        });
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if ((firstRender || loading) && Session.IsInitialized)
+        if (Session.IsInitialized && !_loaded)
+        {
+            _loaded = true;
             await Load();
+        }
     }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        if (Session.IsInitialized) await Load();
-    }
+    public void Dispose() => Session.SessionReady -= OnSessionReadyHandler;
 
     private async Task Load()
     {
         loading = true;
+        StateHasChanged();
         orders  = await OrderService.GetOrdersAsync(Session.SessionId);
         if (orders.Count > 0) expandedId = orders[0].Id;
         loading = false;

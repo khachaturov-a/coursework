@@ -1,15 +1,17 @@
-using Microsoft.EntityFrameworkCore;
-using Practos3.Data;
-using Practos3.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using Coursework.Data;
+using Coursework.Models;
 
-namespace Practos3.Services;
+namespace Coursework.Services;
 
+/// <summary>Реализация <see cref="IFavoriteService"/> на основе Entity Framework Core.</summary>
 public class FavoriteService : IFavoriteService
 {
     private readonly ShopContext _db;
 
     public FavoriteService(ShopContext db) => _db = db;
 
+    /// <inheritdoc/>
     public async Task<List<FavoriteItemDto>> GetFavoritesAsync(string sessionId)
     {
         return await _db.FavoriteItems
@@ -29,17 +31,20 @@ public class FavoriteService : IFavoriteService
             .ToListAsync();
     }
 
+    /// <inheritdoc/>
     public async Task<int> GetFavoritesCountAsync(string sessionId)
     {
         return await _db.FavoriteItems.CountAsync(fi => fi.SessionId == sessionId);
     }
 
+    /// <inheritdoc/>
     public async Task<bool> IsFavoriteAsync(string sessionId, int chetkasId)
     {
         return await _db.FavoriteItems
             .AnyAsync(fi => fi.SessionId == sessionId && fi.ChetkasId == chetkasId);
     }
 
+    /// <inheritdoc/>
     public async Task AddFavoriteAsync(string sessionId, int chetkasId)
     {
         var exists = await IsFavoriteAsync(sessionId, chetkasId);
@@ -53,6 +58,7 @@ public class FavoriteService : IFavoriteService
         await _db.SaveChangesAsync();
     }
 
+    /// <inheritdoc/>
     public async Task RemoveFavoriteAsync(string sessionId, int chetkasId)
     {
         var item = await _db.FavoriteItems
@@ -65,6 +71,7 @@ public class FavoriteService : IFavoriteService
         }
     }
 
+    /// <inheritdoc/>
     public async Task ToggleFavoriteAsync(string sessionId, int chetkasId)
     {
         if (await IsFavoriteAsync(sessionId, chetkasId))

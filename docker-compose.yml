@@ -1,16 +1,19 @@
-version: "3.8"
+﻿version: "3.8"
 
 services:
-  practos3:
+  Coursework:
     image: ${IMAGE_NAME}
-    container_name: practos3-app
+    container_name: Coursework-app
     ports:
       - "${APP_PORT}:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
       - ASPNETCORE_URLS=http://+:8080
+      # Переопределяем путь к БД — файл хранится в именованном volume
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/chetki.db
     volumes:
       - ./appsettings.json:/app/appsettings.json:ro
+      - bead-data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
@@ -18,5 +21,8 @@ services:
       retries: 3
       start_period: 15s
     restart: unless-stopped
+
+volumes:
+  bead-data:
 
 

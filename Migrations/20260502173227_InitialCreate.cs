@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Practos3.Migrations
+namespace Coursework.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration

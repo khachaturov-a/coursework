@@ -1,6 +1,8 @@
 @page "/favorites"
+@implements IDisposable
 @inject IFavoriteService FavoriteService
 @inject ICartService CartService
+@inject CounterNotifier CounterNotifier
 @inject SessionService Session
 
 <PageTitle>Избранное — Чётки</PageTitle>
@@ -28,10 +30,14 @@
             {
                 <div class="product-card">
                     <div class="product-card__cover cat-@GetCatClass(item.CategoryName)">
+                        <img src="/images/products/@(item.ChetkasId).jpeg"
+                             alt="@item.Name"
+                             class="product-card__photo"
+                             onerror="this.style.display='none';this.closest('.product-card__cover').querySelector('.product-card__icon-wrap').style.display='flex'" />
                         <div class="product-card__overlay">
                             <span class="product-card__category">@item.CategoryName</span>
                         </div>
-                        <div class="product-card__icon-wrap">
+                        <div class="product-card__icon-wrap" style="display:none">
                             <i class="bi @GetCatIcon(item.CategoryName) product-card__main-icon"></i>
                         </div>
                         @if (!item.InStock)
@@ -76,21 +82,47 @@
 @code {
     private List<FavoriteItemDto> items = new();
     private bool loading = true;
+    private bool _loaded = false;
 
+    protected override void OnInitialized()
+    {
+        // Подписываемся на момент готовности сессии.
+        // Нужно для случая прямого обновления страницы (F5): при первом рендере
+        // сессия ещё не инициализирована, и OnAfterRenderAsync не вызовется повторно
+        // надёжно. Событие гарантированно уведомит нас, когда MainLayout завершит
+        // инициализацию.
+        Session.SessionReady += OnSessionReadyHandler;
+    }
+
+    private void OnSessionReadyHandler()
+    {
+        InvokeAsync(async () =>
+        {
+            if (!_loaded)
+            {
+                _loaded = true;
+                await Load();
+            }
+        });
+    }
+
+    // Запасной путь: при переходе на страницу через навигацию сессия уже готова,
+    // и событие SessionReady не сработает — загружаемся здесь.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if ((firstRender || loading) && Session.IsInitialized)
+        if (Session.IsInitialized && !_loaded)
+        {
+            _loaded = true;
             await Load();
+        }
     }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        if (Session.IsInitialized) await Load();
-    }
+    public void Dispose() => Session.SessionReady -= OnSessionReadyHandler;
 
     private async Task Load()
     {
         loading = true;
+        StateHasChanged();
         items   = await FavoriteService.GetFavoritesAsync(Session.SessionId);
         loading = false;
         StateHasChanged();
@@ -100,11 +132,13 @@
     {
         await FavoriteService.RemoveFavoriteAsync(Session.SessionId, item.ChetkasId);
         items.Remove(item);
+        await CounterNotifier.NotifyAsync();
     }
 
     private async Task AddToCart(FavoriteItemDto item)
     {
         await CartService.AddToCartAsync(Session.SessionId, item.ChetkasId);
+        await CounterNotifier.NotifyAsync();
     }
 
     private static string GetCatClass(string cat) => cat switch

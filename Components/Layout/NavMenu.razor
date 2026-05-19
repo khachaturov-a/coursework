@@ -1,4 +1,6 @@
 @inject NavigationManager Nav
+@inject IBeadService BeadService
+@inject IJSRuntime JS
 
 <header class="site-header">
     <nav class="navbar navbar-expand-lg">
@@ -10,7 +12,7 @@
             </a>
 
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
-                <i class="bi bi-list text-white fs-4"></i>
+                <i class="bi bi-list navbar-toggler-icon-custom fs-4"></i>
             </button>
 
             <div class="collapse navbar-collapse" id="navMenu">
@@ -21,20 +23,98 @@
                         <input type="text"
                                class="search-input"
                                placeholder="Поиск чёток..."
-                               @bind="searchQuery"
-                               @bind:event="oninput"
-                               @onkeydown="HandleKey" />
+                               value="@searchQuery"
+                               @oninput="OnSearchInput"
+                               @onkeydown="HandleKey"
+                               @onfocus="OnSearchFocus"
+                               @onblur="OnSearchBlur" />
                         @if (!string.IsNullOrEmpty(searchQuery))
                         {
                             <button class="search-clear" @onclick="ClearSearch">
                                 <i class="bi bi-x"></i>
                             </button>
                         }
+                        @if (_showSuggestions && HasDropdownContent)
+                        {
+                            <div class="search-suggestions">
+
+                                @* ── История поиска (только при пустом запросе) ── *@
+                                @if (string.IsNullOrWhiteSpace(searchQuery) && _searchHistory.Count > 0)
+                                {
+                                    <div class="suggestion-header">
+                                        <span>История поиска</span>
+                                        <button class="suggestion-clear-all"
+                                                @onmousedown:preventDefault
+                                                @onclick="ClearHistory">Очистить</button>
+                                    </div>
+                                    @foreach (var term in _searchHistory.Take(4))
+                                    {
+                                        <div class="search-suggestion-item search-suggestion-item--history"
+                                             @onmousedown:preventDefault
+                                             @onclick="() => SelectHistory(term)">
+                                            <div class="suggestion-icon-wrap suggestion-icon-wrap--history">
+                                                <i class="bi bi-clock-history suggestion-icon"></i>
+                                            </div>
+                                            <div class="suggestion-text">
+                                                <span class="suggestion-name">@term</span>
+                                            </div>
+                                            <button class="suggestion-remove"
+                                                    title="Убрать из истории"
+                                                    @onmousedown:preventDefault
+                                                    @onclick:stopPropagation="true"
+                                                    @onclick="() => RemoveHistory(term)">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </div>
+                                    }
+                                }
+
+                                @* ── Товары ── *@
+                                @if (_suggestions.Count > 0)
+                                {
+                                    <div class="suggestion-header @(string.IsNullOrWhiteSpace(searchQuery) && _searchHistory.Count > 0 ? "suggestion-header--sep" : "")">
+                                        @(string.IsNullOrWhiteSpace(searchQuery) ? "Популярные товары" : "Результаты поиска")
+                                    </div>
+                                    @foreach (var item in _suggestions)
+                                    {
+                                        <div class="search-suggestion-item"
+                                             @onmousedown:preventDefault
+                                             @onclick="() => SelectSuggestion(item)">
+                                            <div class="suggestion-icon-wrap">
+                                                <i class="bi bi-search suggestion-icon"></i>
+                                            </div>
+                                            <div class="suggestion-text">
+                                                <span class="suggestion-name">@item.Name</span>
+                                                <span class="suggestion-meta">@item.CategoryName · @item.Material</span>
+                                            </div>
+                                            <span class="suggestion-price">@item.Price.ToString("N0") ₽</span>
+                                        </div>
+                                    }
+                                }
+
+                                @* ── «Показать все» при наборе текста ── *@
+                                @if (!string.IsNullOrWhiteSpace(searchQuery))
+                                {
+                                    <div class="search-suggestion-all"
+                                         @onmousedown:preventDefault
+                                         @onclick="SearchAll">
+                                        <i class="bi bi-search"></i>Показать все результаты по «@searchQuery»
+                                    </div>
+                                }
+
+                            </div>
+                        }
                     </div>
                 </div>
 
-                <!-- Иконки корзины / избранного / заказов -->
+                <!-- Действия -->
                 <div class="nav-actions">
+                    <!-- Переключатель темы -->
+                    <button class="nav-action-btn theme-btn" @onclick="() => OnThemeToggle.InvokeAsync()"
+                            title="@(CurrentTheme == "light" ? "Тёмная тема" : "Светлая тема")">
+                        <i class="bi @(CurrentTheme == "light" ? "bi-moon-stars" : "bi-sun")"></i>
+                    </button>
+
                     <a href="/favorites" class="nav-action-btn @(IsActive("/favorites"))">
                         <i class="bi bi-heart"></i>
                         @if (FavCount > 0)
@@ -57,44 +137,184 @@
         </div>
     </nav>
 
-    <!-- Навигационная лента категорий -->
+    <!-- Лента категорий -->
     <div class="category-bar">
         <div class="container">
             <div class="category-links">
-                <a href="/catalog" class="cat-link @(IsActive("/catalog", exact: true))">Все товары</a>
-                <a href="/catalog?cat=Религиозные"   class="cat-link">Религиозные</a>
-                <a href="/catalog?cat=Деревянные"    class="cat-link">Деревянные</a>
-                <a href="/catalog?cat=Янтарные"      class="cat-link">Янтарные</a>
-                <a href="/catalog?cat=Каменные"      class="cat-link">Каменные</a>
-                <a href="/catalog?cat=Коралловые"    class="cat-link">Коралловые</a>
-                <a href="/catalog?cat=Хрустальные"   class="cat-link">Хрустальные</a>
-                <a href="/catalog?cat=Металлические" class="cat-link">Металлические</a>
-                <a href="/catalog?cat=Антистресс"    class="cat-link">Антистресс</a>
-                <a href="/catalog?cat=Коллекционные" class="cat-link">Коллекционные</a>
-                <a href="/catalog?cat=Роскошные"     class="cat-link">Роскошные</a>
+                <a href="/quiz" class="cat-link cat-link--quiz @(IsActive("/quiz"))">
+                    <i class="bi bi-stars me-1"></i>Подобрать
+                </a>
+                <a href="/catalog" class="cat-link @(IsAllCatsActive())">Все товары</a>
+                <a href="/catalog?cat=Религиозные"   class="cat-link @(IsCatActive("Религиозные"))">Религиозные</a>
+                <a href="/catalog?cat=Деревянные"    class="cat-link @(IsCatActive("Деревянные"))">Деревянные</a>
+                <a href="/catalog?cat=Янтарные"      class="cat-link @(IsCatActive("Янтарные"))">Янтарные</a>
+                <a href="/catalog?cat=Каменные"      class="cat-link @(IsCatActive("Каменные"))">Каменные</a>
+                <a href="/catalog?cat=Коралловые"    class="cat-link @(IsCatActive("Коралловые"))">Коралловые</a>
+                <a href="/catalog?cat=Хрустальные"   class="cat-link @(IsCatActive("Хрустальные"))">Хрустальные</a>
+                <a href="/catalog?cat=Металлические" class="cat-link @(IsCatActive("Металлические"))">Металлические</a>
+                <a href="/catalog?cat=Антистресс"    class="cat-link @(IsCatActive("Антистресс"))">Антистресс</a>
+                <a href="/catalog?cat=Коллекционные" class="cat-link @(IsCatActive("Коллекционные"))">Коллекционные</a>
+                <a href="/catalog?cat=Роскошные"     class="cat-link @(IsCatActive("Роскошные"))">Роскошные</a>
             </div>
         </div>
     </div>
 </header>
 
 @code {
-    [Parameter] public int CartCount { get; set; }
-    [Parameter] public int FavCount  { get; set; }
-    [Parameter] public EventCallback<string> OnSearch { get; set; }
+    [Parameter] public int    CartCount    { get; set; }
+    [Parameter] public int    FavCount     { get; set; }
+    [Parameter] public string CurrentTheme { get; set; } = "light";
+    [Parameter] public EventCallback<string> OnSearch      { get; set; }
+    [Parameter] public EventCallback         OnThemeToggle { get; set; }
 
-    private string searchQuery = string.Empty;
+    private string           searchQuery      = string.Empty;
+    private List<ChetkasDto> _allProducts     = new();
+    private List<ChetkasDto> _suggestions     = new();
+    private List<string>     _searchHistory   = new();
+    private bool             _showSuggestions = false;
+    private const string     HistoryKey       = "bead_search_history";
+
+    private bool HasDropdownContent =>
+        _suggestions.Count > 0 ||
+        (string.IsNullOrWhiteSpace(searchQuery) && _searchHistory.Count > 0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _allProducts = (await BeadService.GetAllAsync(1000)).ToList();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", HistoryKey);
+            if (!string.IsNullOrEmpty(json))
+                _searchHistory = System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new();
+        }
+        catch { }
+    }
+
+    // ── Ввод ────────────────────────────────────────────────────────────────
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? string.Empty;
+        FilterSuggestions();
+    }
+
+    private void OnSearchFocus()
+    {
+        _showSuggestions = true;
+        FilterSuggestions();
+    }
+
+    private async Task OnSearchBlur()
+    {
+        await Task.Delay(150);
+        _showSuggestions = false;
+        StateHasChanged();
+    }
+
+    private void FilterSuggestions()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            // Leave some slots for history items shown above
+            var historySlots = Math.Min(_searchHistory.Count, 4);
+            _suggestions = _allProducts.Take(Math.Max(0, 6 - historySlots)).ToList();
+        }
+        else
+        {
+            var q = searchQuery.Trim().ToLowerInvariant();
+            _suggestions = _allProducts
+                .Where(p => p.Name.ToLowerInvariant().Contains(q)
+                         || p.Material.ToLowerInvariant().Contains(q)
+                         || p.CategoryName.ToLowerInvariant().Contains(q))
+                .Take(6)
+                .ToList();
+        }
+    }
+
+    // ── Выбор подсказки ─────────────────────────────────────────────────────
+
+    private async Task SelectSuggestion(ChetkasDto item)
+    {
+        await SaveToHistory(item.Name);
+        _showSuggestions = false;
+        Nav.NavigateTo($"/product/{item.Id}");
+    }
+
+    private void SelectHistory(string term)
+    {
+        searchQuery      = term;
+        _showSuggestions = false;
+        Nav.NavigateTo($"/catalog?q={Uri.EscapeDataString(term)}");
+    }
+
+    // ── Клавиатура ──────────────────────────────────────────────────────────
 
     private async Task HandleKey(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
+        {
+            _showSuggestions = false;
+            await SaveToHistory(searchQuery);
             await OnSearch.InvokeAsync(searchQuery);
+        }
+        else if (e.Key == "Escape")
+        {
+            _showSuggestions = false;
+        }
+    }
+
+    private async Task SearchAll()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery)) return;
+        await SaveToHistory(searchQuery);
+        _showSuggestions = false;
+        Nav.NavigateTo($"/catalog?q={Uri.EscapeDataString(searchQuery)}");
     }
 
     private void ClearSearch()
     {
-        searchQuery = string.Empty;
+        searchQuery      = string.Empty;
+        _showSuggestions = false;
         Nav.NavigateTo("/catalog");
     }
+
+    // ── История ─────────────────────────────────────────────────────────────
+
+    private async Task SaveToHistory(string term)
+    {
+        if (string.IsNullOrWhiteSpace(term)) return;
+        _searchHistory.Remove(term);
+        _searchHistory.Insert(0, term);
+        if (_searchHistory.Count > 5) _searchHistory.RemoveAt(_searchHistory.Count - 1);
+        await PersistHistory();
+    }
+
+    private async Task RemoveHistory(string term)
+    {
+        _searchHistory.Remove(term);
+        await PersistHistory();
+        FilterSuggestions();
+    }
+
+    private async Task ClearHistory()
+    {
+        _searchHistory.Clear();
+        await PersistHistory();
+        FilterSuggestions();
+    }
+
+    private async Task PersistHistory()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(_searchHistory);
+        await JS.InvokeVoidAsync("localStorage.setItem", HistoryKey, json);
+    }
+
+    // ── Навигация ───────────────────────────────────────────────────────────
 
     private string IsActive(string href, bool exact = false)
     {
@@ -102,5 +322,15 @@
         return exact
             ? (cur == href || (href == "/" && cur == "")) ? "active" : ""
             : cur.StartsWith(href) ? "active" : "";
+    }
+
+    private string IsCatActive(string catName) =>
+        Nav.Uri.Contains($"cat={Uri.EscapeDataString(catName)}") ? "active" : "";
+
+    private string IsAllCatsActive()
+    {
+        var rel  = Nav.Uri.Replace(Nav.BaseUri.TrimEnd('/'), "");
+        var path = rel.Split('?')[0];
+        return path == "/catalog" && !Nav.Uri.Contains("cat=") ? "active" : "";
     }
 }

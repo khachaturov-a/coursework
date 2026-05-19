@@ -1,8 +1,9 @@
+﻿using FluentValidation;
 using Microsoft.EntityFrameworkCore;
-using Practos3.Components;
-using Practos3.Data;
-using Practos3.Models;
-using Practos3.Services;
+using Coursework.Components;
+using Coursework.Data;
+using Coursework.Models;
+using Coursework.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +26,8 @@ builder.Services.AddScoped<IFavoriteService, FavoriteService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
 builder.Services.AddScoped<SessionService>();
+builder.Services.AddScoped<IValidator<OrderFormModel>, OrderFormValidator>();
+builder.Services.AddScoped<CounterNotifier>();
 
 // --- REST API / Swagger ---
 builder.Services.AddEndpointsApiExplorer();

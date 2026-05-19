@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Practos3.Migrations
+namespace Coursework.Migrations
 {
     /// <inheritdoc />
     public partial class AddShopFeatures : Migration

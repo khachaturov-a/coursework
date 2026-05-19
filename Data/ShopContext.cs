@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
-using Practos3.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using Coursework.Models;
 
-namespace Practos3.Data;
+namespace Coursework.Data;
 
 public class ShopContext : DbContext
 {

@@ -1,8 +1,8 @@
-using Microsoft.EntityFrameworkCore;
-using Practos3.Data;
-using Practos3.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using Coursework.Data;
+using Coursework.Models;
 
-namespace Practos3.Services;
+namespace Coursework.Services;
 
 /// <summary>
 /// Контентная фильтрация на основе истории взаимодействий пользователя.
@@ -14,6 +14,7 @@ public class RecommendationService : IRecommendationService
 
     public RecommendationService(ShopContext db) => _db = db;
 
+    /// <inheritdoc/>
     public async Task RecordViewAsync(string sessionId, int chetkasId)
     {
         // Не дублируем просмотр одного товара за последние 30 минут
@@ -33,6 +34,7 @@ public class RecommendationService : IRecommendationService
         await _db.SaveChangesAsync();
     }
 
+    /// <inheritdoc/>
     public async Task<List<RecommendationDto>> GetRecommendationsAsync(string sessionId, int count = 8)
     {
         // --- 1. Собираем веса взаимодействий ---
@@ -120,6 +122,7 @@ public class RecommendationService : IRecommendationService
         return result;
     }
 
+    /// <inheritdoc/>
     public async Task<List<RecommendationDto>> GetSimilarAsync(int chetkasId, int count = 6)
     {
         var source = await _db.Chetkas

@@ -1,15 +1,17 @@
-using Microsoft.EntityFrameworkCore;
-using Practos3.Data;
-using Practos3.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using Coursework.Data;
+using Coursework.Models;
 
-namespace Practos3.Services;
+namespace Coursework.Services;
 
+/// <summary>Реализация <see cref="IBeadService"/> на основе Entity Framework Core.</summary>
 public class BeadService : IBeadService
 {
     private readonly ShopContext _db;
 
     public BeadService(ShopContext db) => _db = db;
 
+    /// <inheritdoc/>
     public async Task<IEnumerable<ChetkasDto>> GetAllAsync(int maxItems)
     {
         var items = await _db.Chetkas
@@ -25,6 +27,7 @@ public class BeadService : IBeadService
         return items.OrderBy(c => c.Price);
     }
 
+    /// <inheritdoc/>
     public async Task<IEnumerable<CategoryDto>> GetCategoriesAsync()
     {
         return await _db.Categories
@@ -36,6 +39,7 @@ public class BeadService : IBeadService
             .ToListAsync();
     }
 
+    /// <inheritdoc/>
     public async Task<IEnumerable<ChetkasDto>> GetByCategoryAsync(int categoryId, int maxItems)
     {
         var items = await _db.Chetkas
@@ -52,6 +56,7 @@ public class BeadService : IBeadService
         return items.OrderBy(c => c.Price);
     }
 
+    /// <inheritdoc/>
     public async Task<ChetkasDto> CreateAsync(Chetkas chetkas)
     {
         _db.Chetkas.Add(chetkas);
@@ -66,6 +71,7 @@ public class BeadService : IBeadService
             chetkas.CategoryId);
     }
 
+    /// <inheritdoc/>
     public async Task<CategoryDto> CreateCategoryAsync(Category category)
     {
         _db.Categories.Add(category);

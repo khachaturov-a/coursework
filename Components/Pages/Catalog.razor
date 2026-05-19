@@ -49,13 +49,21 @@
 
                     <!-- Цена -->
                     <div class="filter-group">
-                        <label class="filter-label">Цена: @minPrice ₽ — @maxPrice ₽</label>
-                        <input type="range" class="filter-range" min="0" max="@absoluteMax"
-                               value="@minPrice"
-                               @oninput="e => { minPrice = int.Parse(e.Value!.ToString()!); ApplyFilter(); }" />
-                        <input type="range" class="filter-range" min="0" max="@absoluteMax"
-                               value="@maxPrice"
-                               @oninput="e => { maxPrice = int.Parse(e.Value!.ToString()!); ApplyFilter(); }" />
+                        <label class="filter-label">Цена, ₽</label>
+                        <div class="price-range-inputs">
+                            <div class="price-field">
+                                <span class="price-field-label">от</span>
+                                <input type="number" class="filter-input" min="0" max="@absoluteMax"
+                                       value="@minPrice"
+                                       @oninput="e => { if (int.TryParse(e.Value?.ToString(), out var v)) { minPrice = Math.Max(0, v); ApplyFilter(); } }" />
+                            </div>
+                            <div class="price-field">
+                                <span class="price-field-label">до</span>
+                                <input type="number" class="filter-input" min="0" max="@absoluteMax"
+                                       value="@maxPrice"
+                                       @oninput="e => { if (int.TryParse(e.Value?.ToString(), out var v)) { maxPrice = Math.Max(0, v); ApplyFilter(); } }" />
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Материал -->
@@ -148,6 +156,11 @@
     private bool   inStockOnly      = false;
     private bool   loading          = true;
 
+    // Предыдущие значения query-параметров — для детектирования изменений
+    private string? _prevCat;
+    private string? _prevQ;
+    private string? _prevSort;
+
     protected override async Task OnInitializedAsync()
     {
         categories  = (await BeadService.GetCategoriesAsync()).ToList();
@@ -162,13 +175,40 @@
         absoluteMax = (int)Math.Ceiling((double)(allProducts.Any() ? allProducts.Max(p => p.Price) : 400000));
         maxPrice    = absoluteMax;
 
-        // Применяем query-параметры
-        if (!string.IsNullOrEmpty(FilterCategory)) selectedCategory = FilterCategory;
-        if (!string.IsNullOrEmpty(SearchQuery))    searchInput      = SearchQuery;
-        if (!string.IsNullOrEmpty(SortParam))      sortMode         = SortParam;
+        // Применяем query-параметры сразу — OnParametersSetAsync пропустит их,
+        // если все три null == null (changed = false на пустом /catalog).
+        selectedCategory = FilterCategory ?? string.Empty;
+        searchInput      = SearchQuery    ?? string.Empty;
+        if (!string.IsNullOrEmpty(SortParam)) sortMode = SortParam;
+        _prevCat  = FilterCategory;
+        _prevQ    = SearchQuery;
+        _prevSort = SortParam;
 
         loading = false;
         ApplyFilter();
+    }
+
+    protected override Task OnParametersSetAsync()
+    {
+        if (loading) return Task.CompletedTask;
+
+        // Реагируем только при реальном изменении query-параметров
+        bool changed = FilterCategory != _prevCat
+                    || SearchQuery    != _prevQ
+                    || SortParam      != _prevSort;
+
+        if (!changed) return Task.CompletedTask;
+
+        _prevCat  = FilterCategory;
+        _prevQ    = SearchQuery;
+        _prevSort = SortParam;
+
+        selectedCategory = FilterCategory ?? string.Empty;
+        searchInput      = SearchQuery    ?? string.Empty;
+        if (!string.IsNullOrEmpty(SortParam)) sortMode = SortParam;
+
+        ApplyFilter();
+        return Task.CompletedTask;
     }
 
     private void ApplyFilter()

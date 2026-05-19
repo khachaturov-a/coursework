@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Practos3.Data;
+using Coursework.Data;
 
 #nullable disable
 
-namespace Practos3.Migrations
+namespace Coursework.Migrations
 {
     [DbContext(typeof(ShopContext))]
     [Migration("20260518083436_AddShopFeatures")]
@@ -20,7 +20,7 @@ namespace Practos3.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
 
-            modelBuilder.Entity("Practos3.Models.CartItem", b =>
+            modelBuilder.Entity("Coursework.Models.CartItem", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -50,7 +50,7 @@ namespace Practos3.Migrations
                     b.ToTable("CartItems");
                 });
 
-            modelBuilder.Entity("Practos3.Models.Category", b =>
+            modelBuilder.Entity("Coursework.Models.Category", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -70,7 +70,7 @@ namespace Practos3.Migrations
                     b.ToTable("Categories");
                 });
 
-            modelBuilder.Entity("Practos3.Models.Chetkas", b =>
+            modelBuilder.Entity("Coursework.Models.Chetkas", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -110,7 +110,7 @@ namespace Practos3.Migrations
                     b.ToTable("Chetkas", (string)null);
                 });
 
-            modelBuilder.Entity("Practos3.Models.FavoriteItem", b =>
+            modelBuilder.Entity("Coursework.Models.FavoriteItem", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -137,7 +137,7 @@ namespace Practos3.Migrations
                     b.ToTable("FavoriteItems");
                 });
 
-            modelBuilder.Entity("Practos3.Models.Order", b =>
+            modelBuilder.Entity("Coursework.Models.Order", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -165,7 +165,7 @@ namespace Practos3.Migrations
                     b.ToTable("Orders");
                 });
 
-            modelBuilder.Entity("Practos3.Models.OrderItem", b =>
+            modelBuilder.Entity("Coursework.Models.OrderItem", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -193,7 +193,7 @@ namespace Practos3.Migrations
                     b.ToTable("OrderItems");
                 });
 
-            modelBuilder.Entity("Practos3.Models.ProductView", b =>
+            modelBuilder.Entity("Coursework.Models.ProductView", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -219,9 +219,9 @@ namespace Practos3.Migrations
                     b.ToTable("ProductViews");
                 });
 
-            modelBuilder.Entity("Practos3.Models.CartItem", b =>
+            modelBuilder.Entity("Coursework.Models.CartItem", b =>
                 {
-                    b.HasOne("Practos3.Models.Chetkas", "Chetkas")
+                    b.HasOne("Coursework.Models.Chetkas", "Chetkas")
                         .WithMany("CartItems")
                         .HasForeignKey("ChetkasId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -230,9 +230,9 @@ namespace Practos3.Migrations
                     b.Navigation("Chetkas");
                 });
 
-            modelBuilder.Entity("Practos3.Models.Chetkas", b =>
+            modelBuilder.Entity("Coursework.Models.Chetkas", b =>
                 {
-                    b.HasOne("Practos3.Models.Category", "Category")
+                    b.HasOne("Coursework.Models.Category", "Category")
                         .WithMany("Chetkas")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -241,9 +241,9 @@ namespace Practos3.Migrations
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("Practos3.Models.FavoriteItem", b =>
+            modelBuilder.Entity("Coursework.Models.FavoriteItem", b =>
                 {
-                    b.HasOne("Practos3.Models.Chetkas", "Chetkas")
+                    b.HasOne("Coursework.Models.Chetkas", "Chetkas")
                         .WithMany("FavoriteItems")
                         .HasForeignKey("ChetkasId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -252,15 +252,15 @@ namespace Practos3.Migrations
                     b.Navigation("Chetkas");
                 });
 
-            modelBuilder.Entity("Practos3.Models.OrderItem", b =>
+            modelBuilder.Entity("Coursework.Models.OrderItem", b =>
                 {
-                    b.HasOne("Practos3.Models.Chetkas", "Chetkas")
+                    b.HasOne("Coursework.Models.Chetkas", "Chetkas")
                         .WithMany("OrderItems")
                         .HasForeignKey("ChetkasId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Practos3.Models.Order", "Order")
+                    b.HasOne("Coursework.Models.Order", "Order")
                         .WithMany("Items")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -271,9 +271,9 @@ namespace Practos3.Migrations
                     b.Navigation("Order");
                 });
 
-            modelBuilder.Entity("Practos3.Models.ProductView", b =>
+            modelBuilder.Entity("Coursework.Models.ProductView", b =>
                 {
-                    b.HasOne("Practos3.Models.Chetkas", "Chetkas")
+                    b.HasOne("Coursework.Models.Chetkas", "Chetkas")
                         .WithMany("ProductViews")
                         .HasForeignKey("ChetkasId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -282,12 +282,12 @@ namespace Practos3.Migrations
                     b.Navigation("Chetkas");
                 });
 
-            modelBuilder.Entity("Practos3.Models.Category", b =>
+            modelBuilder.Entity("Coursework.Models.Category", b =>
                 {
                     b.Navigation("Chetkas");
                 });
 
-            modelBuilder.Entity("Practos3.Models.Chetkas", b =>
+            modelBuilder.Entity("Coursework.Models.Chetkas", b =>
                 {
                     b.Navigation("CartItems");
 
@@ -298,7 +298,7 @@ namespace Practos3.Migrations
                     b.Navigation("ProductViews");
                 });
 
-            modelBuilder.Entity("Practos3.Models.Order", b =>
+            modelBuilder.Entity("Coursework.Models.Order", b =>
                 {
                     b.Navigation("Items");
                 });

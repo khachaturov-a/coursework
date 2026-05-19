@@ -1,14 +1,19 @@
 @inject ICartService CartService
 @inject IFavoriteService FavoriteService
+@inject CounterNotifier CounterNotifier
 @inject NavigationManager Nav
 
 <div class="product-card @(IsNew ? "product-card--new" : "")" @onclick="GoToProduct">
     <!-- Обложка -->
     <div class="product-card__cover cat-@GetCatClass()">
+        <img src="/images/products/@(Product.Id).jpeg"
+             alt="@Product.Name"
+             class="product-card__photo"
+             onerror="this.style.display='none';this.closest('.product-card__cover').querySelector('.product-card__icon-wrap').style.display='flex'" />
         <div class="product-card__overlay">
             <span class="product-card__category">@Product.CategoryName</span>
         </div>
-        <div class="product-card__icon-wrap">
+        <div class="product-card__icon-wrap" style="display:none">
             <i class="bi @GetCatIcon() product-card__main-icon"></i>
         </div>
         @if (IsFavorite)
@@ -74,6 +79,7 @@
         if (string.IsNullOrEmpty(SessionId)) return;
         await FavoriteService.ToggleFavoriteAsync(SessionId, Product.Id);
         IsFavorite = !IsFavorite;
+        await CounterNotifier.NotifyAsync();
         await OnChanged.InvokeAsync();
     }
 
@@ -82,6 +88,7 @@
         if (string.IsNullOrEmpty(SessionId) || Product.StockQuantity == 0) return;
         await CartService.AddToCartAsync(SessionId, Product.Id);
         InCart = true;
+        await CounterNotifier.NotifyAsync();
         await OnChanged.InvokeAsync();
     }
 
@@ -117,10 +124,7 @@
         _               => "bi-circle"
     };
 
-    private static string FormatPrice(decimal price) =>
-        price >= 1000
-            ? $"{price / 1000:0.##} {(price >= 1000 ? "т" : "")}₽"
-            : $"{price:0} ₽";
+    private static string FormatPrice(decimal price) => $"{price:N0} ₽";
 
     private static string TruncateDescription(string? desc) =>
         string.IsNullOrEmpty(desc) ? "" :

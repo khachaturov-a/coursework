@@ -3,11 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Practos3.Data;
+using Coursework.Data;
 
 #nullable disable
 
-namespace Practos3.Migrations
+namespace Coursework.Migrations
 {
     [DbContext(typeof(ShopContext))]
     [Migration("20260502173227_InitialCreate")]
@@ -19,7 +19,7 @@ namespace Practos3.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
 
-            modelBuilder.Entity("Practos3.Models.Category", b =>
+            modelBuilder.Entity("Coursework.Models.Category", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -39,7 +39,7 @@ namespace Practos3.Migrations
                     b.ToTable("Categories");
                 });
 
-            modelBuilder.Entity("Practos3.Models.Chetkas", b =>
+            modelBuilder.Entity("Coursework.Models.Chetkas", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -75,9 +75,9 @@ namespace Practos3.Migrations
                     b.ToTable("Chetkas", (string)null);
                 });
 
-            modelBuilder.Entity("Practos3.Models.Chetkas", b =>
+            modelBuilder.Entity("Coursework.Models.Chetkas", b =>
                 {
-                    b.HasOne("Practos3.Models.Category", "Category")
+                    b.HasOne("Coursework.Models.Category", "Category")
                         .WithMany("Chetkas")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -86,7 +86,7 @@ namespace Practos3.Migrations
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("Practos3.Models.Category", b =>
+            modelBuilder.Entity("Coursework.Models.Category", b =>
                 {
                     b.Navigation("Chetkas");
                 });

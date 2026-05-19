@@ -43,7 +43,11 @@ else
             <!-- Обложка товара -->
             <div class="col-md-5">
                 <div class="product-detail__cover cat-@GetCatClass()">
-                    <i class="bi @GetCatIcon() product-detail__icon"></i>
+                    <img src="/images/products/@(Id).jpeg"
+                         alt="@product.Name"
+                         class="product-detail__photo"
+                         onerror="this.style.display='none';this.closest('.product-detail__cover').querySelector('.product-detail__icon').style.display='flex'" />
+                    <i class="bi @GetCatIcon() product-detail__icon" style="display:none"></i>
                     <span class="product-detail__cat-badge">@product.CategoryName</span>
                 </div>
             </div>
