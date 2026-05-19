@@ -3,11 +3,11 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # Копируем только файл проекта и восстанавливаем зависимости отдельно
-COPY ["Coursework.csproj", "./"]
-RUN dotnet restore "./Coursework.csproj"
+COPY ["coursework.csproj", "./"]
+RUN dotnet restore "./coursework.csproj"
 
 COPY . .
-RUN dotnet publish "./Coursework.csproj" -c Release -o /app/publish
+RUN dotnet publish "./coursework.csproj" -c Release -o /app/publish
 
 # Этап 2 — минимальный runtime-образ без SDK
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
@@ -23,4 +23,4 @@ ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "Coursework.dll"]
+ENTRYPOINT ["dotnet", "coursework.dll"]

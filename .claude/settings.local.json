@@ -27,7 +27,10 @@
       "Bash(Remove-Item -Force \"D:\\\\MyDriver\\\\KSIPO\\\\coursework\\\\coursework.sln\")",
       "Bash(sqlite3 --version)",
       "Bash(sqlite3 *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(docker info *)",
+      "Bash(docker build *)",
+      "Bash(docker push *)"
     ]
   }
 }

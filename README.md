@@ -10,8 +10,8 @@
 
 | Ресурс | Ссылка |
 |--------|--------|
-| GitHub | `https://github.com/YOUR_GITHUB_USERNAME/bead-shop` |
-| Docker Hub | `https://hub.docker.com/r/YOUR_DOCKERHUB_USERNAME/coursework` |
+| GitHub | `https://github.com/khachaturov-a/coursework` |
+| Docker Hub | `https://hub.docker.com/r/khachaturov/coursework` |
 
 ---
 
@@ -146,7 +146,7 @@ Category ──< Chetkas >─── CartItem
 
 ```bash
 # 1. Клонировать репозиторий
-git clone https://github.com/YOUR_GITHUB_USERNAME/bead-shop.git
+git clone https://github.com/khachaturov-a/coursework.git
 cd bead-shop
 
 # 2. Восстановить зависимости
@@ -172,14 +172,14 @@ Swagger UI: **http://localhost:5000/swagger**
 
 ```bash
 # 1. Скачать готовый образ
-docker pull YOUR_DOCKERHUB_USERNAME/coursework:latest
+docker pull khachaturov/coursework:latest
 
 # 2. Запустить контейнер
 docker run -d \
   -p 8089:8080 \
   -v bead-data:/app/data \
   --name bead-shop \
-  YOUR_DOCKERHUB_USERNAME/coursework:latest
+  khachaturov/coursework:latest
 ```
 
 Приложение доступно по адресу: **http://localhost:8089**
@@ -190,7 +190,7 @@ docker run -d \
 
 ```bash
 # 1. Клонировать репозиторий
-git clone https://github.com/YOUR_GITHUB_USERNAME/bead-shop.git
+git clone https://github.com/khachaturov-a/coursework.git
 cd bead-shop
 
 # 2. Создать файл переменных окружения
@@ -198,7 +198,7 @@ cp .env.example .env
 # Отредактировать .env: вписать ваш IMAGE_NAME
 
 # 3. Собрать образ локально
-docker build -t YOUR_DOCKERHUB_USERNAME/coursework:latest .
+docker build -t khachaturov/coursework:latest .
 
 # 4. Запустить через compose
 docker-compose up -d
@@ -217,7 +217,7 @@ Swagger UI: **http://localhost:8089/swagger**
 
 ```env
 APP_PORT=8089
-IMAGE_NAME=YOUR_DOCKERHUB_USERNAME/coursework:latest
+IMAGE_NAME=khachaturov/coursework:latest
 ASPNETCORE_ENVIRONMENT=Production
 ```
 
