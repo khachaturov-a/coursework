@@ -734,6 +734,12 @@ a:hover { color: var(--gold-light); }
   width: 60px; height: 60px; border-radius: var(--radius-sm);
   display: flex; align-items: center; justify-content: center;
   font-size: 1.4rem; color: rgba(0,0,0,0.45); flex-shrink: 0;
+  overflow: hidden; position: relative;
+}
+.cart-item__photo {
+  width: 60px; height: 60px;
+  object-fit: cover; object-position: center;
+  display: block; flex-shrink: 0;
 }
 [data-theme="dark"] .cart-item__cover { color: rgba(255,255,255,0.80); }
 .cart-item__info { flex: 1; min-width: 0; }

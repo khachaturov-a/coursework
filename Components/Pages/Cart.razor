@@ -33,7 +33,11 @@
                     {
                         <div class="cart-item">
                             <div class="cart-item__cover cat-@GetCatClass(item.CategoryName)">
-                                <i class="bi @GetCatIcon(item.CategoryName)"></i>
+                                <img src="/images/products/@(item.ChetkasId).jpeg"
+                                     alt="@item.Name"
+                                     class="cart-item__photo"
+                                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+                                <i class="bi @GetCatIcon(item.CategoryName)" style="display:none"></i>
                             </div>
                             <div class="cart-item__info">
                                 <a href="/product/@item.ChetkasId" class="cart-item__name">@item.Name</a>
