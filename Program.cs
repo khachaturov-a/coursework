@@ -1,8 +1,9 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Coursework.Components;
 using Coursework.Data;
 using Coursework.Models;
+using Coursework.Repositories;
 using Coursework.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,16 +11,18 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Строка подключения 'DefaultConnection' не найдена");
 
-// --- EF Core ---
 builder.Services.AddDbContext<ShopContext>(options =>
-    options.UseSqlite(connectionString),
-    ServiceLifetime.Scoped);
+    options.UseSqlite(connectionString), ServiceLifetime.Scoped);
 
-// --- Blazor ---
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// --- Бизнес-сервисы ---
+builder.Services.AddScoped<IBeadRepository, BeadRepository>();
+builder.Services.AddScoped<ICartRepository, CartRepository>();
+builder.Services.AddScoped<IFavoriteRepository, FavoriteRepository>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IProductViewRepository, ProductViewRepository>();
+
 builder.Services.AddScoped<IBeadService, BeadService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IFavoriteService, FavoriteService>();
@@ -29,7 +32,6 @@ builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<IValidator<OrderFormModel>, OrderFormValidator>();
 builder.Services.AddScoped<CounterNotifier>();
 
-// --- REST API / Swagger ---
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new() { Title = "Магазин чёток API", Version = "v1" }));
@@ -38,7 +40,6 @@ builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
-// --- Миграции + сидирование ---
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ShopContext>();
@@ -46,33 +47,27 @@ using (var scope = app.Services.CreateScope())
     await DataSeeder.SeedAsync(db);
 }
 
-// --- Middleware ---
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseStaticFiles();
 app.UseAntiforgery();
 
-// --- Blazor ---
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// --- REST API endpoints ---
 app.MapGet("/api/products", async (IBeadService service, IConfiguration config) =>
 {
     var maxItems = int.TryParse(config["AppSettings:MaxItems"], out var max) ? max : 50;
-    var items = (await service.GetAllAsync(maxItems)).ToList();
+    var items    = (await service.GetAllAsync(maxItems)).ToList();
     return Results.Ok(new ProductsResponse(items.Count, items));
 })
 .WithName("GetProducts")
 .WithSummary("Получить список всех чёток")
 .Produces<ProductsResponse>();
 
-app.MapGet("/api/products/{id:int}", async (int id, ShopContext db) =>
+app.MapGet("/api/products/{id:int}", async (int id, IBeadRepository repo) =>
 {
-    var item = await db.Chetkas
-        .Include(c => c.Category)
-        .FirstOrDefaultAsync(c => c.Id == id);
-
+    var item = await repo.GetByIdAsync(id);
     if (item is null)
         return Results.NotFound(new { message = $"Товар с id={id} не найден" });
 
@@ -99,25 +94,25 @@ app.MapGet("/api/products/by-category/{categoryId:int}", async (int categoryId, 
 .WithSummary("Получить чётки по категории")
 .Produces<IEnumerable<ChetkasDto>>();
 
-app.MapPost("/api/categories", async (Category newCategory, IBeadService service, ShopContext db) =>
+app.MapPost("/api/categories", async (Category newCategory, IBeadService service, IBeadRepository repo) =>
 {
-    if (await db.Categories.AnyAsync(c => c.Name == newCategory.Name))
+    if (await repo.CategoryNameExistsAsync(newCategory.Name))
         return Results.BadRequest(new { message = $"Категория '{newCategory.Name}' уже существует" });
 
-    return Results.Created($"/api/categories/{(await service.CreateCategoryAsync(newCategory)).Id}",
-        await service.CreateCategoryAsync(newCategory));
+    var created = await service.CreateCategoryAsync(newCategory);
+    return Results.Created($"/api/categories/{created.Id}", created);
 })
 .WithName("CreateCategory")
 .WithSummary("Добавить новую категорию")
 .Produces<CategoryDto>(201).Produces(400);
 
-app.MapPost("/api/products", async (Chetkas newItem, IBeadService service, ShopContext db) =>
+app.MapPost("/api/products", async (Chetkas newItem, IBeadService service, IBeadRepository repo) =>
 {
-    if (!await db.Categories.AnyAsync(c => c.Id == newItem.CategoryId))
+    if (!await repo.CategoryExistsAsync(newItem.CategoryId))
         return Results.BadRequest(new { message = $"Категория id={newItem.CategoryId} не существует" });
 
-    return Results.Created($"/api/products/{(await service.CreateAsync(newItem)).Id}",
-        await service.CreateAsync(newItem));
+    var created = await service.CreateAsync(newItem);
+    return Results.Created($"/api/products/{created.Id}", created);
 })
 .WithName("CreateProduct")
 .WithSummary("Добавить новый товар")

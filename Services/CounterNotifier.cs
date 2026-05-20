@@ -8,7 +8,6 @@ public class CounterNotifier
 {
     public event Func<Task>? OnCountersChanged;
 
-    /// <summary>Уведомляет подписчиков о том, что счётчики корзины / избранного изменились.</summary>
     public async Task NotifyAsync()
     {
         if (OnCountersChanged is null) return;

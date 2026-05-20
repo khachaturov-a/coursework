@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Coursework.Models;
 
+/// <summary>Позиция заказа: один вид товара с зафиксированной ценой на момент покупки.</summary>
 public class OrderItem
 {
     [Key]

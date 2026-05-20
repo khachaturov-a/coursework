@@ -2,6 +2,7 @@
 
 namespace Coursework.Models;
 
+/// <summary>Позиция в корзине покупателя, привязанная к сессии.</summary>
 public class CartItem
 {
     [Key]

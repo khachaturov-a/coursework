@@ -1,17 +1,16 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Coursework.Data;
 using Coursework.Models;
 
 namespace Coursework.Services;
 
+/// <summary>Начальное заполнение базы данных категориями и товарами.</summary>
 public static class DataSeeder
 {
     public static async Task SeedAsync(ShopContext db)
     {
-        // Если уже ровно 50 товаров — пропускаем
         if (await db.Chetkas.CountAsync() == 50) return;
 
-        // Очищаем все зависимые таблицы перед пересидированием
         await db.OrderItems.ExecuteDeleteAsync();
         await db.Orders.ExecuteDeleteAsync();
         await db.CartItems.ExecuteDeleteAsync();
@@ -50,7 +49,6 @@ public static class DataSeeder
 
         var products = new List<Chetkas>
         {
-            // --- Религиозные (5) ---
             new() { Name = "«Иисусова молитва» из кипариса",    Price = 890,    StockQuantity = 45, Material = "кипарис",      CategoryId = rel.Id,
                     Description = "Классические православные чётки на 33 зерна из благоухающего кипариса Афонского монастыря. Идеальны для ежедневной молитвенной практики." },
             new() { Name = "«Афонские» из чёрного дерева",      Price = 1200,   StockQuantity = 30, Material = "чёрное дерево", CategoryId = rel.Id,
@@ -62,7 +60,6 @@ public static class DataSeeder
             new() { Name = "«Медитация» из белого нефрита",     Price = 3200,   StockQuantity = 15, Material = "нефрит",        CategoryId = rel.Id,
                     Description = "Нефрит символизирует чистоту помыслов. Полированные зёрна с шелковистой поверхностью." },
 
-            // --- Деревянные (5) ---
             new() { Name = "«Экодерево» из кедра",              Price = 650,    StockQuantity = 80, Material = "кедр",           CategoryId = wood.Id,
                     Description = "Простые и приятные чётки из сибирского кедра. Аромат хвои снимает усталость и помогает сосредоточиться." },
             new() { Name = "«Лесная сказка» из сосны",          Price = 480,    StockQuantity = 100,Material = "сосна",          CategoryId = wood.Id,
@@ -74,7 +71,6 @@ public static class DataSeeder
             new() { Name = "«Можжевельник» ароматные",           Price = 720,    StockQuantity = 55, Material = "можжевельник",   CategoryId = wood.Id,
                     Description = "Ароматные чётки из можжевельника. Природный антисептик, успокаивающий запах." },
 
-            // --- Янтарные (5) ---
             new() { Name = "«Медовый янтарь»",                  Price = 3500,   StockQuantity = 25, Material = "янтарь медовый",     CategoryId = amb.Id,
                     Description = "Тёплый янтарь медового цвета с мягким свечением. Балтийское месторождение, ручная обработка." },
             new() { Name = "«Вишнёвый янтарь»",                 Price = 4200,   StockQuantity = 18, Material = "янтарь вишнёвый",    CategoryId = amb.Id,
@@ -86,7 +82,6 @@ public static class DataSeeder
             new() { Name = "«Янтарные матовые»",                Price = 3200,   StockQuantity = 30, Material = "янтарь матовый",     CategoryId = amb.Id,
                     Description = "Матовая обработка делает янтарь приятным на ощупь. Молочно-золотистый оттенок." },
 
-            // --- Каменные (5) ---
             new() { Name = "«Аметист» королевский",             Price = 4500,   StockQuantity = 22, Material = "аметист",         CategoryId = stone.Id,
                     Description = "Фиолетовый аметист — камень мудрости и духовного роста. Полированные зёрна 12 мм с глубоким цветом." },
             new() { Name = "«Малахит» уральский",               Price = 5500,   StockQuantity = 15, Material = "малахит",         CategoryId = stone.Id,
@@ -98,7 +93,6 @@ public static class DataSeeder
             new() { Name = "«Обсидиан» чёрный вулканический",   Price = 2100,   StockQuantity = 45, Material = "обсидиан",        CategoryId = stone.Id,
                     Description = "Вулканическое стекло идеально-чёрного цвета. Мощная защитная энергетика." },
 
-            // --- Коралловые (5) ---
             new() { Name = "«Красный коралл» средиземноморский", Price = 7500,  StockQuantity = 12, Material = "коралл красный",       CategoryId = coral.Id,
                     Description = "Подлинный средиземноморский красный коралл. Добывается традиционным способом без вреда экосистеме." },
             new() { Name = "«Розовый коралл» нежный",            Price = 6800,  StockQuantity = 15, Material = "коралл розовый",       CategoryId = coral.Id,
@@ -110,7 +104,6 @@ public static class DataSeeder
             new() { Name = "«Морской коралл» натуральный",       Price = 4800,  StockQuantity = 25, Material = "коралл морской",       CategoryId = coral.Id,
                     Description = "Натуральный морской коралл с неповторимой ветвистой текстурой. Природная красота без обработки." },
 
-            // --- Хрустальные (5) ---
             new() { Name = "«Горный хрусталь» прозрачный",      Price = 4200,   StockQuantity = 30, Material = "горный хрусталь",  CategoryId = cryst.Id,
                     Description = "Кристально прозрачный горный хрусталь без примесей. Камень ясности и концентрации." },
             new() { Name = "«Дымчатый хрусталь» мистический",   Price = 5500,   StockQuantity = 20, Material = "дымчатый хрусталь", CategoryId = cryst.Id,
@@ -122,7 +115,6 @@ public static class DataSeeder
             new() { Name = "«Муранское стекло» авторское",       Price = 8500,   StockQuantity = 8,  Material = "муранское стекло", CategoryId = cryst.Id,
                     Description = "Уникальные чётки из муранского стекла, сделанные мастером острова Мурано. Каждая — единственная." },
 
-            // --- Металлические (5) ---
             new() { Name = "«Сталь 316L» матовая",              Price = 2800,   StockQuantity = 45, Material = "нержавеющая сталь",    CategoryId = metal.Id,
                     Description = "Медицинская нержавеющая сталь 316L. Не темнеет, не окисляется, гипоаллергенная." },
             new() { Name = "«Серебро 925» классика",            Price = 8500,   StockQuantity = 18, Material = "серебро 925",           CategoryId = metal.Id,
@@ -134,7 +126,6 @@ public static class DataSeeder
             new() { Name = "«Латунные» полированные",           Price = 2200,   StockQuantity = 40, Material = "латунь",                CategoryId = metal.Id,
                     Description = "Полированная латунь тёплого золотистого цвета. Приятный вес, благородный блеск." },
 
-            // --- Антистресс (5) ---
             new() { Name = "«Силиконовые» мягкие",              Price = 350,    StockQuantity = 120,Material = "силикон",             CategoryId = anti.Id,
                     Description = "Гипоаллергенный мягкий силикон. Идеально подходят для офиса и людей с тревожностью." },
             new() { Name = "«Акриловые» разноцветные",          Price = 420,    StockQuantity = 100,Material = "акрил",              CategoryId = anti.Id,
@@ -146,7 +137,6 @@ public static class DataSeeder
             new() { Name = "«Кедровые» ароматные антистресс",   Price = 720,    StockQuantity = 60, Material = "кедр",               CategoryId = anti.Id,
                     Description = "Крупные кедровые бусины с ярко выраженным хвойным ароматом. Природная ароматерапия." },
 
-            // --- Коллекционные (5) ---
             new() { Name = "«Императорские» из жадеита",        Price = 35000,  StockQuantity = 2,  Material = "жадеит",             CategoryId = coll.Id,
                     Description = "Жадеит имперского зелёного цвета — самый редкий нефрит. Символ власти в Китае тысячи лет." },
             new() { Name = "«Афганские» лазурит+золото",        Price = 28000,  StockQuantity = 3,  Material = "лазурит + золото",   CategoryId = coll.Id,
@@ -158,7 +148,6 @@ public static class DataSeeder
             new() { Name = "«Греческие» из оливкового дерева",  Price = 6800,   StockQuantity = 6,  Material = "оливковое дерево",   CategoryId = coll.Id,
                     Description = "Комболои — греческие чётки из освящённого оливкового дерева. Народный символ удачи." },
 
-            // --- Роскошные (5) ---
             new() { Name = "«Золотые» из золота 585",           Price = 85000,  StockQuantity = 3,  Material = "золото 585",              CategoryId = lux.Id,
                     Description = "Массивные чётки из жёлтого золота 585 пробы. Вес 120 г. Ювелирная работа высшего класса." },
             new() { Name = "«Серебряные» с эмалью",             Price = 18500,  StockQuantity = 6,  Material = "серебро 925 + эмаль",     CategoryId = lux.Id,

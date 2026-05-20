@@ -1,26 +1,25 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Coursework.Models;
 
 namespace Coursework.Data;
 
+/// <summary>Контекст базы данных магазина чёток (EF Core, Code First).</summary>
 public class ShopContext : DbContext
 {
     public ShopContext(DbContextOptions<ShopContext> options) : base(options) { }
 
-    public DbSet<Category>    Categories   { get; set; } = null!;
-    public DbSet<Chetkas>     Chetkas      { get; set; } = null!;
-    public DbSet<CartItem>    CartItems    { get; set; } = null!;
+    public DbSet<Category>     Categories    { get; set; } = null!;
+    public DbSet<Chetkas>      Chetkas       { get; set; } = null!;
+    public DbSet<CartItem>     CartItems     { get; set; } = null!;
     public DbSet<FavoriteItem> FavoriteItems { get; set; } = null!;
-    public DbSet<ProductView> ProductViews { get; set; } = null!;
-    public DbSet<Order>       Orders       { get; set; } = null!;
-    public DbSet<OrderItem>   OrderItems   { get; set; } = null!;
+    public DbSet<ProductView>  ProductViews  { get; set; } = null!;
+    public DbSet<Order>        Orders        { get; set; } = null!;
+    public DbSet<OrderItem>    OrderItems    { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Chetkas
         modelBuilder.Entity<Chetkas>()
-            .HasIndex(c => c.Name)
-            .IsUnique();
+            .HasIndex(c => c.Name).IsUnique();
 
         modelBuilder.Entity<Chetkas>()
             .HasOne(c => c.Category)
@@ -30,10 +29,8 @@ public class ShopContext : DbContext
 
         modelBuilder.Entity<Chetkas>().ToTable("Chetkas");
 
-        // CartItem — уникальная пара (SessionId, ChetkasId)
         modelBuilder.Entity<CartItem>()
-            .HasIndex(ci => new { ci.SessionId, ci.ChetkasId })
-            .IsUnique();
+            .HasIndex(ci => new { ci.SessionId, ci.ChetkasId }).IsUnique();
 
         modelBuilder.Entity<CartItem>()
             .HasOne(ci => ci.Chetkas)
@@ -41,10 +38,8 @@ public class ShopContext : DbContext
             .HasForeignKey(ci => ci.ChetkasId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // FavoriteItem — уникальная пара (SessionId, ChetkasId)
         modelBuilder.Entity<FavoriteItem>()
-            .HasIndex(fi => new { fi.SessionId, fi.ChetkasId })
-            .IsUnique();
+            .HasIndex(fi => new { fi.SessionId, fi.ChetkasId }).IsUnique();
 
         modelBuilder.Entity<FavoriteItem>()
             .HasOne(fi => fi.Chetkas)
@@ -52,7 +47,6 @@ public class ShopContext : DbContext
             .HasForeignKey(fi => fi.ChetkasId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // ProductView
         modelBuilder.Entity<ProductView>()
             .HasIndex(pv => new { pv.SessionId, pv.ChetkasId });
 
@@ -62,7 +56,6 @@ public class ShopContext : DbContext
             .HasForeignKey(pv => pv.ChetkasId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Order → OrderItems
         modelBuilder.Entity<Order>()
             .HasMany(o => o.Items)
             .WithOne(oi => oi.Order)

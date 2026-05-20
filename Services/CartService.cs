@@ -1,114 +1,73 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Coursework.Data;
 using Coursework.Models;
+using Coursework.Repositories;
 
 namespace Coursework.Services;
 
-/// <summary>Реализация <see cref="ICartService"/> на основе Entity Framework Core.</summary>
+/// <summary>Реализация <see cref="ICartService"/>.</summary>
 public class CartService : ICartService
 {
-    private readonly ShopContext _db;
+    private readonly ICartRepository _repo;
 
-    public CartService(ShopContext db) => _db = db;
+    public CartService(ICartRepository repo) => _repo = repo;
 
-    /// <inheritdoc/>
     public async Task<List<CartItemDto>> GetCartAsync(string sessionId)
     {
-        return await _db.CartItems
-            .Where(ci => ci.SessionId == sessionId)
-            .Include(ci => ci.Chetkas)
-            .ThenInclude(c => c!.Category)
-            .Select(ci => new CartItemDto(
-                ci.Id,
-                ci.ChetkasId,
-                ci.Chetkas!.Name,
-                ci.Chetkas!.Price,
-                ci.Quantity,
-                ci.Chetkas!.Material,
-                ci.Chetkas!.Category != null ? ci.Chetkas.Category.Name : "—",
-                ci.Chetkas!.Price * ci.Quantity
-            ))
-            .ToListAsync();
+        var items = await _repo.GetCartAsync(sessionId);
+        return items.Select(ci => new CartItemDto(
+            ci.Id, ci.ChetkasId, ci.Chetkas!.Name, ci.Chetkas.Price,
+            ci.Quantity, ci.Chetkas.Material,
+            ci.Chetkas.Category?.Name ?? "—",
+            ci.Chetkas.Price * ci.Quantity)).ToList();
     }
 
-    /// <inheritdoc/>
     public async Task<int> GetCartCountAsync(string sessionId)
-    {
-        return await _db.CartItems
-            .Where(ci => ci.SessionId == sessionId)
-            .SumAsync(ci => ci.Quantity);
-    }
+        => await _repo.GetTotalQuantityAsync(sessionId);
 
-    /// <inheritdoc/>
     public async Task AddToCartAsync(string sessionId, int chetkasId, int quantity = 1)
     {
-        var existing = await _db.CartItems
-            .FirstOrDefaultAsync(ci => ci.SessionId == sessionId && ci.ChetkasId == chetkasId);
-
+        var existing = await _repo.FindItemAsync(sessionId, chetkasId);
         if (existing is not null)
-        {
             existing.Quantity = Math.Min(existing.Quantity + quantity, 100);
-        }
         else
-        {
-            _db.CartItems.Add(new CartItem
+            _repo.Add(new CartItem
             {
                 SessionId = sessionId,
                 ChetkasId = chetkasId,
                 Quantity  = Math.Clamp(quantity, 1, 100)
             });
-        }
 
-        await _db.SaveChangesAsync();
+        await _repo.SaveChangesAsync();
     }
 
-    /// <inheritdoc/>
     public async Task UpdateQuantityAsync(string sessionId, int cartItemId, int quantity)
     {
-        var item = await _db.CartItems
-            .FirstOrDefaultAsync(ci => ci.Id == cartItemId && ci.SessionId == sessionId);
-
+        var item = await _repo.FindByIdAsync(sessionId, cartItemId);
         if (item is null) return;
 
         if (quantity <= 0)
-        {
-            _db.CartItems.Remove(item);
-        }
+            _repo.Remove(item);
         else
-        {
             item.Quantity = Math.Clamp(quantity, 1, 100);
-        }
 
-        await _db.SaveChangesAsync();
+        await _repo.SaveChangesAsync();
     }
 
-    /// <inheritdoc/>
     public async Task RemoveFromCartAsync(string sessionId, int cartItemId)
     {
-        var item = await _db.CartItems
-            .FirstOrDefaultAsync(ci => ci.Id == cartItemId && ci.SessionId == sessionId);
-
+        var item = await _repo.FindByIdAsync(sessionId, cartItemId);
         if (item is not null)
         {
-            _db.CartItems.Remove(item);
-            await _db.SaveChangesAsync();
+            _repo.Remove(item);
+            await _repo.SaveChangesAsync();
         }
     }
 
-    /// <inheritdoc/>
     public async Task ClearCartAsync(string sessionId)
     {
-        var items = _db.CartItems.Where(ci => ci.SessionId == sessionId);
-        _db.CartItems.RemoveRange(items);
-        await _db.SaveChangesAsync();
+        _repo.Clear(sessionId);
+        await _repo.SaveChangesAsync();
     }
 
-    /// <inheritdoc/>
     public async Task<decimal> GetCartTotalAsync(string sessionId)
-    {
-        return await _db.CartItems
-            .Where(ci => ci.SessionId == sessionId)
-            .Include(ci => ci.Chetkas)
-            .SumAsync(ci => ci.Chetkas!.Price * ci.Quantity);
-    }
+        => await _repo.GetTotalAmountAsync(sessionId);
 }

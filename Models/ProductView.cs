@@ -2,6 +2,7 @@
 
 namespace Coursework.Models;
 
+/// <summary>Запись о просмотре товара, используемая системой рекомендаций.</summary>
 public class ProductView
 {
     [Key]

@@ -2,6 +2,7 @@
 
 namespace Coursework.Models;
 
+/// <summary>Товар, добавленный в избранное в рамках сессии.</summary>
 public class FavoriteItem
 {
     [Key]

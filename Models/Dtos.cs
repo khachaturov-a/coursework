@@ -1,4 +1,5 @@
-﻿namespace Coursework.Models;
+﻿/// <summary>DTO-типы для передачи данных между слоями и REST API.</summary>
+namespace Coursework.Models;
 
 public record ChetkasDto(
     int     Id,

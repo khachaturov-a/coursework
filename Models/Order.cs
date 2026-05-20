@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Coursework.Models;
 
+/// <summary>Заказ покупателя, оформленный из корзины.</summary>
 public class Order
 {
     [Key]

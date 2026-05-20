@@ -2,6 +2,7 @@
 
 namespace Coursework.Models;
 
+/// <summary>Категория товаров (например: «Янтарные», «Деревянные»).</summary>
 public class Category
 {
     [Key]

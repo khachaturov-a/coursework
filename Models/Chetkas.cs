@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Coursework.Models;
 
+/// <summary>Товар — чётки в каталоге магазина.</summary>
 public class Chetkas
 {
     [Key]
