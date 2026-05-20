@@ -1,7 +1,6 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @inject SessionService Session
-@inject ProtectedLocalStorage LocalStorage
 @inject ICartService CartService
 @inject IFavoriteService FavoriteService
 @inject CounterNotifier CounterNotifier
@@ -67,13 +66,13 @@
 
             if (!Session.IsInitialized)
             {
-                var result = await LocalStorage.GetAsync<string>("bead_session_id");
-                var sid = result.Success && !string.IsNullOrEmpty(result.Value)
-                    ? result.Value
+                var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "bead_session_id");
+                var sid = !string.IsNullOrEmpty(stored)
+                    ? stored
                     : Guid.NewGuid().ToString("N");
 
-                if (!result.Success)
-                    await LocalStorage.SetAsync("bead_session_id", sid);
+                if (string.IsNullOrEmpty(stored))
+                    await JS.InvokeVoidAsync("localStorage.setItem", "bead_session_id", sid);
 
                 Session.Initialize(sid);
             }

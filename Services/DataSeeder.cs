@@ -171,6 +171,10 @@ public static class DataSeeder
                     Description = "Чётки с 50 бриллиантами общим весом 5 карат в белом золоте 750. Абсолютная роскошь." },
         };
 
+        // Явно назначаем ID 9..58 — имена файлов фото совпадают с этими ID
+        for (int i = 0; i < products.Count; i++)
+            products[i].Id = 9 + i;
+
         db.Chetkas.AddRange(products);
         await db.SaveChangesAsync();
     }

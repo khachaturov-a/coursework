@@ -2,6 +2,7 @@
 @inject IBeadService BeadService
 @inject SessionService Session
 @inject NavigationManager Nav
+@implements IDisposable
 
 <PageTitle>Каталог — Чётки</PageTitle>
 
@@ -156,13 +157,10 @@
     private bool   inStockOnly      = false;
     private bool   loading          = true;
 
-    // Предыдущие значения query-параметров — для детектирования изменений
-    private string? _prevCat;
-    private string? _prevQ;
-    private string? _prevSort;
-
     protected override async Task OnInitializedAsync()
     {
+        Nav.LocationChanged += OnLocationChanged;
+
         categories  = (await BeadService.GetCategoriesAsync()).ToList();
         var items   = (await BeadService.GetAllAsync(500)).ToList();
         allProducts = items.Select(p => new RecommendationDto(
@@ -175,41 +173,33 @@
         absoluteMax = (int)Math.Ceiling((double)(allProducts.Any() ? allProducts.Max(p => p.Price) : 400000));
         maxPrice    = absoluteMax;
 
-        // Применяем query-параметры сразу — OnParametersSetAsync пропустит их,
-        // если все три null == null (changed = false на пустом /catalog).
         selectedCategory = FilterCategory ?? string.Empty;
         searchInput      = SearchQuery    ?? string.Empty;
         if (!string.IsNullOrEmpty(SortParam)) sortMode = SortParam;
-        _prevCat  = FilterCategory;
-        _prevQ    = SearchQuery;
-        _prevSort = SortParam;
 
         loading = false;
         ApplyFilter();
     }
 
-    protected override Task OnParametersSetAsync()
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        if (loading) return Task.CompletedTask;
+        if (loading) return;
 
-        // Реагируем только при реальном изменении query-параметров
-        bool changed = FilterCategory != _prevCat
-                    || SearchQuery    != _prevQ
-                    || SortParam      != _prevSort;
+        var uri = Nav.ToAbsoluteUri(e.Location);
+        if (!uri.AbsolutePath.TrimEnd('/').Equals("/catalog", StringComparison.OrdinalIgnoreCase))
+            return;
 
-        if (!changed) return Task.CompletedTask;
+        var qs = QueryHelpers.ParseQuery(uri.Query);
 
-        _prevCat  = FilterCategory;
-        _prevQ    = SearchQuery;
-        _prevSort = SortParam;
+        selectedCategory = qs.TryGetValue("cat",  out var cat)  ? cat.ToString()  : string.Empty;
+        searchInput      = qs.TryGetValue("q",    out var q)    ? q.ToString()    : string.Empty;
+        if (qs.TryGetValue("sort", out var sort) && !string.IsNullOrEmpty(sort))
+            sortMode = sort.ToString();
 
-        selectedCategory = FilterCategory ?? string.Empty;
-        searchInput      = SearchQuery    ?? string.Empty;
-        if (!string.IsNullOrEmpty(SortParam)) sortMode = SortParam;
-
-        ApplyFilter();
-        return Task.CompletedTask;
+        InvokeAsync(ApplyFilter);
     }
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
 
     private void ApplyFilter()
     {
