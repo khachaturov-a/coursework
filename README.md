@@ -40,6 +40,7 @@
 | API | ASP.NET Core Minimal API |
 | Документация API | Swashbuckle / Swagger UI |
 | Валидация | FluentValidation 11 |
+| Паттерн доступа к данным | Repository Pattern (5 репозиториев) |
 | Стилизация | Bootstrap 5.3, Bootstrap Icons 1.11, кастомный CSS |
 | Контейнеры | Docker (multi-stage build) + docker-compose |
 
@@ -78,6 +79,17 @@ bead-shop/
 │   ├── Order.cs / OrderItem.cs   # Заказ / позиция заказа
 │   ├── ProductView.cs            # История просмотров
 │   └── Dtos.cs                   # DTO для API и рекомендаций
+├── Repositories/
+│   ├── IBeadRepository.cs        # Интерфейс репозитория каталога
+│   ├── BeadRepository.cs
+│   ├── ICartRepository.cs        # Интерфейс репозитория корзины
+│   ├── CartRepository.cs
+│   ├── IFavoriteRepository.cs    # Интерфейс репозитория избранного
+│   ├── FavoriteRepository.cs
+│   ├── IOrderRepository.cs       # Интерфейс репозитория заказов
+│   ├── OrderRepository.cs
+│   ├── IProductViewRepository.cs # Интерфейс репозитория истории просмотров
+│   └── ProductViewRepository.cs
 ├── Services/
 │   ├── BeadService.cs            # CRUD товаров
 │   ├── CartService.cs            # Корзина
@@ -85,6 +97,7 @@ bead-shop/
 │   ├── OrderService.cs           # Заказы
 │   ├── RecommendationService.cs  # Система рекомендаций
 │   ├── SessionService.cs         # Сессии пользователей
+│   ├── CounterNotifier.cs        # Уведомления об изменении счётчиков (корзина, избранное)
 │   └── DataSeeder.cs             # Начальное заполнение БД
 ├── wwwroot/
 │   ├── css/app.css               # Кастомные стили (светлая/тёмная тема)
@@ -105,17 +118,21 @@ Browser / Blazor Client
         ▼
  Blazor Server (SignalR)
         │
-  ┌─────┴──────┐
-  │  Services  │  ← DI-сервисы (Cart, Order, Recommendation…)
-  └─────┬──────┘
+  ┌─────┴──────────┐
+  │    Services    │  ← DI-сервисы (Cart, Order, Recommendation…)
+  └─────┬──────────┘
         │
-  ┌─────┴──────┐
-  │  EF Core   │  ← ShopContext → SQLite
-  └────────────┘
+  ┌─────┴──────────┐
+  │  Repositories  │  ← IXxxRepository / XxxRepository
+  └─────┬──────────┘
         │
-  ┌─────┴──────┐
-  │ Minimal API│  ← /api/products, /api/categories…
-  └────────────┘
+  ┌─────┴──────────┐
+  │    EF Core     │  ← ShopContext → SQLite
+  └────────────────┘
+        │
+  ┌─────┴──────────┐
+  │  Minimal API   │  ← /api/products, /api/categories…
+  └────────────────┘
 ```
 
 ### Модель данных (основные связи)
